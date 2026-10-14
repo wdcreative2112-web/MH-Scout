@@ -141,3 +141,4 @@ npm run build
 
 ## 📄 Lisensi
 Hak Cipta © 2026 PramukaOne. Dikembangkan untuk Gerakan Pramuka Indonesia.
+# MH-Scout
