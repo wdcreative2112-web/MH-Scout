@@ -35,7 +35,19 @@ export default async function ReportsPage() {
       orderBy: { date: "desc" },
       include: { category: true },
     });
-    categories = JSON.parse(JSON.stringify(categories));
+    const rawCategories = await prisma.financeCategory.findMany({
+      orderBy: { name: "asc" },
+    });
+    categories = JSON.parse(JSON.stringify(rawCategories));
+
+    const rawDuesList = await prisma.memberDues.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        duesType: true,
+        member: { include: { group: true } },
+      },
+    });
+
     members = JSON.parse(JSON.stringify(members));
     groups = JSON.parse(JSON.stringify(groups));
 
