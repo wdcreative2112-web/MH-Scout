@@ -1,26 +1,31 @@
 import path from "path";
 import fs from "fs";
 
-// Point explicitly to matching Prisma 6.4 query engine binary
-try {
-  const enginesDir = path.resolve(process.cwd(), "node_modules/@prisma/engines");
-  const engineSrc = path.join(enginesDir, "query_engine-windows.dll.node");
-  const clientDir = path.resolve(process.cwd(), "node_modules/.prisma/client");
-  const engineDest = path.join(clientDir, "query_engine-windows.dll.node");
+// If running on Linux/Vercel cloud, purge any Windows query engine library env vars
+if (process.platform !== "win32") {
+  delete process.env.PRISMA_QUERY_ENGINE_LIBRARY;
+} else {
+  // Point explicitly to matching Prisma 6.4 query engine binary on Windows local dev
+  try {
+    const enginesDir = path.resolve(process.cwd(), "node_modules/@prisma/engines");
+    const engineSrc = path.join(enginesDir, "query_engine-windows.dll.node");
+    const clientDir = path.resolve(process.cwd(), "node_modules/.prisma/client");
+    const engineDest = path.join(clientDir, "query_engine-windows.dll.node");
 
-  if (fs.existsSync(engineSrc)) {
-    process.env.PRISMA_QUERY_ENGINE_LIBRARY = engineSrc;
-    if (fs.existsSync(engineDest)) {
-      const srcStat = fs.statSync(engineSrc);
-      const destStat = fs.statSync(engineDest);
-      if (srcStat.size !== destStat.size) {
-        try {
-          fs.copyFileSync(engineSrc, engineDest);
-        } catch {}
+    if (fs.existsSync(engineSrc)) {
+      process.env.PRISMA_QUERY_ENGINE_LIBRARY = engineSrc;
+      if (fs.existsSync(engineDest)) {
+        const srcStat = fs.statSync(engineSrc);
+        const destStat = fs.statSync(engineDest);
+        if (srcStat.size !== destStat.size) {
+          try {
+            fs.copyFileSync(engineSrc, engineDest);
+          } catch {}
+        }
       }
     }
-  }
-} catch {}
+  } catch {}
+}
 
 import { PrismaClient } from "@prisma/client";
 import { Pool, neonConfig } from "@neondatabase/serverless";
