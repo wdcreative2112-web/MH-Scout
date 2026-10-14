@@ -372,7 +372,7 @@ export async function saveBatchAttendanceAction(data: {
     }
 
     // Run database transactions for atomic persistence
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const rec of records) {
         const existing = await tx.attendanceRecord.findUnique({
           where: {
