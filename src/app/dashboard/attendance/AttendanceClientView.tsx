@@ -442,14 +442,14 @@ export function AttendanceClientView({
 
     try {
       const res = await updateRoutineScheduleAction(formData);
-      if (!res.success) {
+      if (!res.success || !res.data) {
         setActionError(res.error || "Gagal menyimpan jadwal rutin.");
         setActionLoading(false);
       } else {
         setRoutineModal(false);
         setActionLoading(false);
         setCurrentRoutine(res.data);
-        const extraMsg = res.createdCount > 0 ? ` (${res.createdCount} sesi terdekat langsung diterbitkan)` : "";
+        const extraMsg = res.createdCount && res.createdCount > 0 ? ` (${res.createdCount} sesi terdekat langsung diterbitkan)` : "";
         setActionSuccess(`Jadwal rutin berhasil diatur: Berlaku Setiap Hari ${res.data.dayName} seterusnya!${extraMsg}`);
         setTimeout(() => setActionSuccess(null), 4000);
         startTransition(() => {
@@ -469,8 +469,9 @@ export function AttendanceClientView({
       const res = await syncRoutineMeetingsAction();
       setActionLoading(false);
       if (res.success) {
-        if (res.createdCount > 0) {
-          setActionSuccess(`Berhasil menerbitkan ${res.createdCount} sesi latihan rutin baru untuk hari ${currentRoutine.dayName}!`);
+        const count = res.createdCount ?? 0;
+        if (count > 0) {
+          setActionSuccess(`Berhasil menerbitkan ${count} sesi latihan rutin baru untuk hari ${currentRoutine.dayName}!`);
         } else {
           setActionSuccess(`Sesi latihan untuk hari ${currentRoutine.dayName} sudah tersedia lengkap di daftar.`);
         }

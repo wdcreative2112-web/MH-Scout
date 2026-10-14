@@ -442,7 +442,12 @@ export async function saveBatchAttendanceAction(data: {
 /**
  * Perbarui pengaturan jadwal latihan rutin mingguan permanen
  */
-export async function updateRoutineScheduleAction(formData: FormData) {
+export async function updateRoutineScheduleAction(formData: FormData): Promise<{
+  success: boolean;
+  data?: import("@/lib/routineSchedule").RoutineScheduleConfig;
+  error?: string;
+  createdCount?: number;
+}> {
   const session = await requireAuth();
   if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
     return { success: false, error: "Akses ditolak." };
@@ -501,7 +506,11 @@ export async function updateRoutineScheduleAction(formData: FormData) {
 /**
  * Pemicu sinkronisasi manual sesi latihan rutin
  */
-export async function syncRoutineMeetingsAction() {
+export async function syncRoutineMeetingsAction(): Promise<{
+  success: boolean;
+  createdCount?: number;
+  error?: string;
+}> {
   const session = await requireAuth();
   if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
     return { success: false, error: "Akses ditolak." };
