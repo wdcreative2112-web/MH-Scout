@@ -1,0 +1,480 @@
+// Prisma Schema for PramukaOne
+// Optimized for Neon PostgreSQL
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  SEKRETARIS
+  BENDAHARA
+  KETUA_REGU
+}
+
+enum AttendanceStatus {
+  HADIR
+  IZIN
+  SAKIT
+  ALPA
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  password       String
+  role           Role      @default(SEKRETARIS)
+  groupId        String?
+  isActive       Boolean   @default(true)
+  phone          String?
+  avatar         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  group          ScoutGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  transactions   FinancialTransaction[]
+  auditLogs      AuditLog[]
+  attendanceAudits AttendanceAuditLog[]
+  news           News[]
+  articles       Article[]
+
+  @@index([email])
+  @@index([role])
+  @@index([groupId])
+}
+
+model OrganizationProfile {
+  id             String    @id @default("default")
+  name           String    @default("Gugus Depan PramukaOne")
+  pangkalan      String    @default("Pangkalan Gerakan Pramuka")
+  description    String    @default("Organisasi kepanduan yang membentuk generasi muda berkarakter, tangguh, dan berakhlak mulia.")
+  history        String?   @db.Text
+  vision         String?   @db.Text
+  mission        String?   @db.Text
+  structure      String?   @db.Text
+  address        String?
+  phone          String?
+  email          String?
+  instagram      String?
+  youtube        String?
+  logoUrl        String?
+  heroImage      String?
+  initialBalance Decimal   @default(0) @db.Decimal(12, 2)
+  updatedAt      DateTime  @updatedAt
+}
+
+model ScoutGroup {
+  id          String    @id @default(cuid())
+  name        String
+  category    String    // e.g., "Penggalang Putra", "Penggalang Putri", "Penegak"
+  leaderId    String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  leader      Leader?   @relation(fields: [leaderId], references: [id], onDelete: SetNull)
+  members     Member[]
+  users       User[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model Leader {
+  id          String       @id @default(cuid())
+  name        String
+  nip         String?      // NTA / NIP Pembina
+  gender      String?      // "L" / "P"
+  phone       String?
+  email       String?
+  position    String       // "Ka Gudep", "Pembina Satuan", "Pembina Pendamping"
+  photo       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  groups      ScoutGroup[]
+
+  @@index([isActive])
+}
+
+model Member {
+  id           String             @id @default(cuid())
+  memberNumber String             @unique
+  fullName     String
+  gender       String             // "L" / "P"
+  classGrade   String?            // "VII-A", "X IPA 1"
+  scoutLevel   String             // "Siaga", "Penggalang Ramu", "Penggalang Rakit", "Penggalang Terap", "Penegak Bantara", "Penegak Laksana"
+  groupId      String?
+  joinDate     DateTime           @default(now())
+  status       String             @default("AKTIF") // "AKTIF", "NONAKTIF", "ALUMNI"
+  phone        String?
+  parentPhone  String?
+  notes        String?            @db.Text
+  avatar       String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  group        ScoutGroup?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  attendances  AttendanceRecord[]
+  skills       MemberSkillProgress[]
+  duesPayments MemberDues[]
+
+  @@index([memberNumber])
+  @@index([groupId])
+  @@index([status])
+  @@index([scoutLevel])
+}
+
+model Activity {
+  id          String             @id @default(cuid())
+  title       String
+  category    String             // "Latihan Rutin", "Perkemahan", "Lomba", "Pelantikan", "Bakti Sosial", "Lainnya"
+  description String?            @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  status      String             @default("TERJADWAL") // "TERJADWAL", "BERJALAN", "SELESAI", "DIBATALKAN"
+  isPublic    Boolean            @default(false)
+  coverImage  String?
+  notes       String?            @db.Text
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  meetings    AttendanceMeeting[]
+  albums      GalleryAlbum[]
+
+  @@index([status])
+  @@index([isPublic])
+  @@index([startDate])
+}
+
+model AttendanceMeeting {
+  id          String             @id @default(cuid())
+  title       String             // e.g. "Latihan Rutin Minggu ke-1"
+  meetingDate DateTime
+  startTime   String?            // "14:00"
+  endTime     String?            // "16:30"
+  location    String?            @default("Pangkalan")
+  agenda      String?            @db.Text
+  status      String             @default("SELESAI") // "TERJADWAL", "SELESAI", "DIBATALKAN"
+  notes       String?            @db.Text
+  activityId  String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  activity    Activity?          @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  records     AttendanceRecord[]
+
+  @@index([meetingDate])
+  @@index([status])
+}
+
+model AttendanceRecord {
+  id           String            @id @default(cuid())
+  meetingId    String
+  memberId     String
+  status       AttendanceStatus  @default(HADIR)
+  notes        String?
+  recordedById String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  meeting      AttendanceMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  member       Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, memberId])
+  @@index([meetingId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model AttendanceAuditLog {
+  id             String    @id @default(cuid())
+  meetingId      String
+  memberId       String
+  previousStatus String?
+  newStatus      String
+  changedById    String
+  reason         String?
+  createdAt      DateTime  @default(now())
+
+  changedBy      User      @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([memberId])
+}
+
+model SkillRequirement {
+  id          String                @id @default(cuid())
+  type        String                // "SKU" or "SKK"
+  golongan    String                // "Siaga", "Penggalang", "Penegak", "Pandega"
+  level       String?               // "Ramu", "Rakit", "Terap", "Purwa", "Madya", "Utama"
+  number      Int
+  title       String
+  description String                @db.Text
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  progress    MemberSkillProgress[]
+
+  @@index([type])
+  @@index([golongan])
+  @@index([level])
+}
+
+model MemberSkillProgress {
+  id            String           @id @default(cuid())
+  memberId      String
+  requirementId String
+  status        String           @default("BELUM") // "BELUM", "PROSES", "LULUS"
+  testedAt      DateTime?
+  examinerName  String?
+  notes         String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  member        Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  requirement   SkillRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, requirementId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model Letter {
+  id            String    @id @default(cuid())
+  letterNumber  String
+  type          String    // "MASUK" or "KELUAR"
+  date          DateTime
+  subject       String
+  sender        String?
+  recipient     String?
+  summary       String?   @db.Text
+  attachmentUrl String?
+  status        String    @default("DRAF") // "DRAF", "DIKIRIM", "DITERIMA", "DIARSIPKAN"
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([letterNumber])
+  @@index([type])
+  @@index([status])
+}
+
+model FinanceCategory {
+  id           String                 @id @default(cuid())
+  name         String
+  type         String                 // "PEMASUKAN" or "PENGELUARAN"
+  description  String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  transactions FinancialTransaction[]
+
+  @@index([type])
+}
+
+model FinancialTransaction {
+  id                 String          @id @default(cuid())
+  referenceNo        String?
+  date               DateTime
+  type               String          // "PEMASUKAN" or "PENGELUARAN"
+  categoryId         String
+  amount             Decimal         @db.Decimal(12, 2)
+  title              String
+  sourceOrRecipient  String?
+  description        String?         @db.Text
+  proofUrl           String?
+  status             String          @default("VALID") // "VALID", "BATAL"
+  createdById        String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  category           FinanceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy          User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([date])
+  @@index([type])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model DuesType {
+  id          String       @id @default(cuid())
+  name        String       // e.g. "Iuran Kas Bulanan", "Iuran Kemah Pelantikan"
+  amount      Decimal      @db.Decimal(12, 2)
+  period      String       // "BULANAN", "INSIDENTAL"
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  memberDues  MemberDues[]
+
+  @@index([isActive])
+}
+
+model MemberDues {
+  id          String    @id @default(cuid())
+  duesTypeId  String
+  memberId    String
+  periodName  String    // e.g. "Oktober 2024"
+  amount      Decimal   @db.Decimal(12, 2)
+  amountPaid  Decimal   @default(0) @db.Decimal(12, 2)
+  status      String    @default("BELUM_LUNAS") // "LUNAS", "SEBAGIAN", "BELUM_LUNAS"
+  paidAt      DateTime?
+  proofUrl    String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  duesType    DuesType  @relation(fields: [duesTypeId], references: [id], onDelete: Restrict)
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([duesTypeId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model NewsCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  news      News[]
+}
+
+model News {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  summary     String        @db.Text
+  content     String        @db.Text
+  coverImage  String?
+  categoryId  String?
+  authorId    String?
+  authorName  String?
+  status      String        @default("DRAF") // "DRAF", "TERBIT", "ARSIP"
+  publishedAt DateTime?
+  views       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  category    NewsCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author      User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+}
+
+model ArticleCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  articles  Article[]
+}
+
+model Article {
+  id          String           @id @default(cuid())
+  title       String
+  slug        String           @unique
+  summary     String           @db.Text
+  content     String           @db.Text
+  coverImage  String?
+  categoryId  String?
+  authorId    String?
+  authorName  String?
+  status      String           @default("DRAF") // "DRAF", "TERBIT", "ARSIP"
+  publishedAt DateTime?
+  views       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  category    ArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author      User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+}
+
+model GalleryAlbum {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  description String?        @db.Text
+  eventDate   DateTime?
+  coverImage  String?
+  isPublished Boolean        @default(true)
+  activityId  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  activity    Activity?      @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  photos      GalleryPhoto[]
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+model GalleryPhoto {
+  id          String       @id @default(cuid())
+  albumId     String
+  imageUrl    String
+  caption     String?
+  sortOrder   Int          @default(0)
+  isPublished Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  album       GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([albumId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userName  String?
+  action    String
+  module    String
+  details   String?  @db.Text
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  fileName     String
+  originalName String?
+  mimeType     String
+  size         Int
+  url          String
+  storageKey   String?
+  provider     String   @default("local")
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([provider])
+}

@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8faf9;
+  --foreground: #0f241d;
+  --scout-primary: #1e4f3a;
+  --scout-secondary: #2d7d58;
+  --scout-accent: #b86644;
+  --scout-gold: #d97706;
+  --scout-sand: #f4ede2;
+  --card-bg: #ffffff;
+  --card-border: #e2e8e5;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f3;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #97d1b3;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64b68f;
+}
+
+/* Badges and Scout Utilities */
+.scout-badge-hadir {
+  @apply bg-emerald-100 text-emerald-800 border border-emerald-300;
+}
+
+.scout-badge-izin {
+  @apply bg-blue-100 text-blue-800 border border-blue-300;
+}
+
+.scout-badge-sakit {
+  @apply bg-amber-100 text-amber-800 border border-amber-300;
+}
+
+.scout-badge-alpa {
+  @apply bg-rose-100 text-rose-800 border border-rose-300;
+}
+
+.scout-gradient {
+  background: linear-gradient(135deg, #184231 0%, #1e4f3a 50%, #246447 100%);
+}
+
+.scout-card {
+  @apply bg-white rounded-xl border border-emerald-950/10 shadow-sm transition-all duration-200;
+}
+
+.scout-card:hover {
+  @apply shadow-md border-emerald-950/20;
+}
+
+/* Print Optimization */
+@media print {
+  aside,
+  nav,
+  header,
+  button,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+

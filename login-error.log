@@ -1,0 +1,369 @@
+[2026-10-10T17:58:47.905Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+Stack: PrismaClientInitializationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+    at ei.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7568)
+    at ei.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+
+[2026-10-10T17:59:11.083Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+Stack: PrismaClientInitializationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+    at ei.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7568)
+    at ei.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+
+[2026-10-10T17:59:36.008Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+Stack: PrismaClientInitializationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 5)
+    at ei.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7568)
+    at ei.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+
+[2026-10-12T17:05:25.773Z]
+Message: All attempts to open a WebSocket to connect to the database failed. Please refer to https://github.com/neondatabase/serverless/blob/main/CONFIG.md#websocketconstructor-typeof-websocket--undefined. Details: fetch failed
+Stack: Error: All attempts to open a WebSocket to connect to the database failed. Please refer to https://github.com/neondatabase/serverless/blob/main/CONFIG.md#websocketconstructor-typeof-websocket--undefined. Details: fetch failed
+    at file:///D:/WEB/PramukaOne/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at async PrismaNeon.performIO (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:390:22)
+    at async PrismaNeon.queryRaw (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:347:17)
+    at async D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:3:8919
+Code: undefined
+Meta: {}
+
+[2026-10-12T17:05:37.289Z]
+Message: All attempts to open a WebSocket to connect to the database failed. Please refer to https://github.com/neondatabase/serverless/blob/main/CONFIG.md#websocketconstructor-typeof-websocket--undefined. Details: fetch failed
+Stack: Error: All attempts to open a WebSocket to connect to the database failed. Please refer to https://github.com/neondatabase/serverless/blob/main/CONFIG.md#websocketconstructor-typeof-websocket--undefined. Details: fetch failed
+    at file:///D:/WEB/PramukaOne/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at async PrismaNeon.performIO (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:390:22)
+    at async PrismaNeon.queryRaw (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:347:17)
+    at async D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:3:8919
+Code: undefined
+Meta: {}
+
+[2026-10-12T18:46:24.606Z]
+Message: getaddrinfo ENOTFOUND ep-crimson-pond-b3pu9aai-pooler.c-4.ap-southeast-1.aws.neon.tech
+Stack: Error: getaddrinfo ENOTFOUND ep-crimson-pond-b3pu9aai-pooler.c-4.ap-southeast-1.aws.neon.tech
+    at file:///D:/WEB/PramukaOne/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async PrismaNeon.performIO (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:390:22)
+    at async PrismaNeon.queryRaw (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:347:17)
+    at async D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:3:8919
+Code: undefined
+Meta: {}
+
+[2026-10-13T11:55:11.491Z]
+Message: read ECONNRESET
+Stack: Error: read ECONNRESET
+    at file:///D:/WEB/PramukaOne/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async PrismaNeon.performIO (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:390:22)
+    at async PrismaNeon.queryRaw (file:///D:/WEB/PramukaOne/node_modules/@prisma/adapter-neon/dist/index.mjs:347:17)
+    at async D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:3:8919
+Code: undefined
+Meta: {}
+
+[2026-10-13T12:12:47.998Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@gmail.com"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@gmail.com"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+    at Pn (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at Un.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7090)
+    at Un.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6771)
+    at Un.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6478)
+    at async l (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9644)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+
+[2026-10-13T12:13:00.029Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@pramukaone.id"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@pramukaone.id"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+    at Pn (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at Un.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7090)
+    at Un.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6771)
+    at Un.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6478)
+    at async l (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9644)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+
+[2026-10-13T12:13:19.041Z]
+Message: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@gmail.com"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    email: "admin@gmail.com"
+  },
+  include: {
+    group: true,
+    ~~~~~
+?   transactions?: true,
+?   auditLogs?: true,
+?   attendanceAudits?: true,
+?   news?: true,
+?   articles?: true
+  }
+}
+
+Unknown field `group` for include statement on model `User`. Available options are marked with ?.
+    at Pn (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at Un.handleRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:7090)
+    at Un.handleAndLogRequestError (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6771)
+    at Un.request (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:121:6478)
+    at async l (D:\WEB\PramukaOne\node_modules\@prisma\client\runtime\library.js:130:9644)
+    at async loginAction (webpack-internal:///(action-browser)/./src/actions/auth.ts:38:22)
+    at async executeActionAndPrepareForRender (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:3117)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:958
+    at async handleAction (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:34:12066)
+    at async renderToHTMLOrFlightImpl (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:40300)
+    at async doRender (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:441:28)
+    at async AppPageRouteModule.handleResponse (D:\WEB\PramukaOne\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:42:66787)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:593:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2F(auth)%2Flogin%2Fpage&page=%2F(auth)%2Flogin%2Fpage&appPaths=%2F(auth)%2Flogin%2Fpage&pagePath=private-next-app-dir%2F(auth)%2Flogin%2Fpage.tsx&appDir=D%3A%5CWEB%5CPramukaOne%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=D%3A%5CWEB%5CPramukaOne&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:971:20)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1427:9)
+    at async DevServer.renderPageComponent (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1479:24)
+    at async DevServer.renderToResponseImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1519:32)
+    at async DevServer.pipeImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:1023:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\base-server.js:914:17)
+    at async D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (D:\WEB\PramukaOne\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (D:\WEB\PramukaOne\node_modules\next\dist\server\lib\start-server.js:226:13)
+Code: undefined
+Meta: {}
+

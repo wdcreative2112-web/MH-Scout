@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#2d1e18"/>
+  <g fill="#f59e0b" opacity="0.8">
+    <circle cx="300" cy="180" r="50" fill="none" stroke="#f59e0b" stroke-width="4"/>
+    <path d="M 300 140 C 290 160 280 180 280 195 C 280 206 289 215 300 215 C 311 215 320 206 320 195 C 320 180 310 160 300 140 Z" />
+    <text x="300" y="270" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#d7ccc8">PramukaOne</text>
+    <text x="300" y="295" font-family="sans-serif" font-size="14" text-anchor="middle" fill="#8d6e63">Dokumentasi &amp; Galeri Kegiatan</text>
+  </g>
+</svg>
