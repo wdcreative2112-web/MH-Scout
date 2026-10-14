@@ -33,7 +33,7 @@ export function DashboardHeader({ session }: HeaderProps) {
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                Gugus Depan PramukaOne
+                Gugus Depan MH SCOUT
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                 {session.role}

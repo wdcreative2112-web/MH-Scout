@@ -146,3 +146,130 @@ export async function payMemberDuesAction(memberDuesId: string, amountPaid: numb
     return { success: false, error: "Gagal mencatat pembayaran iuran." };
   }
 }
+
+export async function updateDuesTypeAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  const raw = {
+    name: formData.get("name") as string,
+    amount: parseFloat(formData.get("amount") as string),
+    period: (formData.get("period") as any) || "BULANAN",
+    description: (formData.get("description") as string) || null,
+  };
+
+  const parsed = duesTypeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  try {
+    const duesType = await prisma.duesType.update({
+      where: { id },
+      data: {
+        name: parsed.data.name,
+        amount: parsed.data.amount,
+        period: parsed.data.period,
+        description: parsed.data.description,
+      },
+    });
+
+    revalidatePath("/dashboard/dues");
+    return {
+      success: true,
+      data: {
+        ...duesType,
+        amount: Number(duesType.amount),
+      },
+    };
+  } catch {
+    return { success: false, error: "Gagal memperbarui jenis iuran." };
+  }
+}
+
+export async function deleteDuesTypeAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const duesCount = await prisma.memberDues.count({
+      where: { duesTypeId: id },
+    });
+
+    if (duesCount > 0) {
+      return {
+        success: false,
+        error: `Jenis iuran ini telah memiliki ${duesCount} tagihan anggota. Nonaktifkan status iuran alih-alih menghapusnya demi arsip data.`,
+      };
+    }
+
+    await prisma.duesType.delete({
+      where: { id },
+    });
+
+    revalidatePath("/dashboard/dues");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal menghapus jenis iuran." };
+  }
+}
+
+export async function toggleDuesTypeActiveAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const duesType = await prisma.duesType.findUnique({ where: { id } });
+    if (!duesType) return { success: false, error: "Jenis iuran tidak ditemukan." };
+
+    await prisma.duesType.update({
+      where: { id },
+      data: { isActive: !duesType.isActive },
+    });
+
+    revalidatePath("/dashboard/dues");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal mengubah status aktif jenis iuran." };
+  }
+}
+
+export async function deleteMemberDuesAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const bill = await prisma.memberDues.findUnique({
+      where: { id },
+    });
+
+    if (!bill) {
+      return { success: false, error: "Tagihan iuran tidak ditemukan." };
+    }
+
+    if (Number(bill.amountPaid) > 0) {
+      return {
+        success: false,
+        error: "Tagihan yang sudah memiliki riwayat pembayaran tidak dapat dihapus sembarangan demi kesesuaian kas.",
+      };
+    }
+
+    await prisma.memberDues.delete({
+      where: { id },
+    });
+
+    revalidatePath("/dashboard/dues");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal membatalkan tagihan iuran." };
+  }
+}
+

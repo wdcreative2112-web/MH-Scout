@@ -338,7 +338,38 @@ export default async function KetuaReguDashboardPage() {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Cards (Visible on screens < sm) */}
+            <div className="sm:hidden space-y-2.5">
+              {members.map((m) => (
+                <div
+                  key={m.id}
+                  className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs flex items-center justify-center shrink-0 border border-emerald-200/50">
+                      {m.fullName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-xs text-slate-900 truncate">{m.fullName}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Kelas: {m.classGrade || "-"} • {m.phone || m.parentPhone || "No HP -"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                    {m.scoutLevel || "Penggalang"}
+                  </span>
+                </div>
+              ))}
+              {members.length === 0 && (
+                <div className="py-6 text-center text-xs text-slate-400">
+                  Belum ada anggota terdaftar di regu ini.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">

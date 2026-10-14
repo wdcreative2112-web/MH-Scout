@@ -98,3 +98,51 @@ export async function updateLeaderAction(id: string, formData: FormData) {
     return { success: false, error: "Gagal memperbarui data pembina." };
   }
 }
+
+export async function deleteLeaderAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const leader = await prisma.leader.findUnique({
+      where: { id },
+      include: {
+        groups: true,
+      },
+    });
+
+    if (!leader) {
+      return { success: false, error: "Data pembina tidak ditemukan." };
+    }
+
+    // Set leaderId to null on associated groups so groups are preserved
+    await prisma.scoutGroup.updateMany({
+      where: { leaderId: id },
+      data: { leaderId: null },
+    });
+
+    await prisma.leader.delete({
+      where: { id },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_PEMBINA",
+        module: "PEMBINA",
+        details: `Menghapus pembina: ${leader.name} (${leader.position})`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/leaders");
+    revalidatePath("/dashboard/groups");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Delete leader error:", err);
+    return { success: false, error: "Gagal menghapus data pembina dari database." };
+  }
+}
+

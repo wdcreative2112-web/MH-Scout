@@ -20,14 +20,14 @@ export async function generateMetadata({
       include: { category: true },
     });
     if (!item || item.status !== "TERBIT") {
-      return { title: "Artikel Tidak Ditemukan — PramukaOne" };
+      return { title: "Artikel Tidak Ditemukan — MH SCOUT" };
     }
     return {
-      title: `${item.title} — PramukaOne`,
+      title: `${item.title} — MH SCOUT`,
       description: item.summary,
     };
   } catch {
-    return { title: "Artikel Edukasi — PramukaOne" };
+    return { title: "Artikel Edukasi — MH SCOUT" };
   }
 }
 

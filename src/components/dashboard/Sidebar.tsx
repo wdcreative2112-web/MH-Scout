@@ -137,7 +137,7 @@ export function DashboardSidebar({ session, onCloseMobile }: SidebarProps) {
           </div>
           <div>
             <span className="text-lg font-black tracking-tight text-white">
-              Pramuka<span className="text-emerald-400">One</span>
+              MH <span className="text-emerald-400">SCOUT</span>
             </span>
             <p className="text-[10px] font-semibold text-slate-400 -mt-1">Dashboard Terpadu</p>
           </div>

@@ -1,4 +1,4 @@
-// Prisma Schema for PramukaOne
+// Prisma Schema for MH SCOUT
 // Optimized for Neon PostgreSQL
 
 generator client {
@@ -53,7 +53,7 @@ model User {
 
 model OrganizationProfile {
   id             String    @id @default("default")
-  name           String    @default("Gugus Depan PramukaOne")
+  name           String    @default("Gugus Depan MH SCOUT")
   pangkalan      String    @default("Pangkalan Gerakan Pramuka")
   description    String    @default("Organisasi kepanduan yang membentuk generasi muda berkarakter, tangguh, dan berakhlak mulia.")
   history        String?   @db.Text

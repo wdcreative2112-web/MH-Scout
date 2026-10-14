@@ -2,7 +2,14 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTransactionAction, createCategoryAction, voidTransactionAction } from "@/actions/finance";
+import {
+  createTransactionAction,
+  createCategoryAction,
+  updateCategoryAction,
+  deleteCategoryAction,
+  voidTransactionAction,
+  deleteTransactionAction,
+} from "@/actions/finance";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import {
   Wallet,
@@ -18,6 +25,8 @@ import {
   Loader2,
   AlertCircle,
   Eye,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 
 interface FinanceClientViewProps {
@@ -45,9 +54,14 @@ export function FinanceClientView({
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txType, setTxType] = useState<"PEMASUKAN" | "PENGELUARAN">("PEMASUKAN");
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState<any | null>(null);
+  const [deletingCat, setDeletingCat] = useState<any | null>(null);
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [deletingTx, setDeletingTx] = useState<any | null>(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(currentFilter.q || "");
 
@@ -93,19 +107,26 @@ export function FinanceClientView({
     }
   };
 
-  const handleCatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     const formData = new FormData(e.currentTarget);
     try {
-      const res = await createCategoryAction(formData);
+      let res;
+      if (editingCat) {
+        res = await updateCategoryAction(editingCat.id, formData);
+      } else {
+        res = await createCategoryAction(formData);
+      }
+
       if (!res.success) {
-        setError(res.error || "Gagal membuat kategori.");
+        setError(res.error || "Gagal menyimpan kategori.");
         setLoading(false);
       } else {
-        setCatModalOpen(false);
+        setEditingCat(null);
+        setShowCatForm(false);
         setLoading(false);
         router.refresh();
       }
@@ -115,10 +136,52 @@ export function FinanceClientView({
     }
   };
 
+  const handleDeleteCat = async () => {
+    if (!deletingCat) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await deleteCategoryAction(deletingCat.id);
+      if (!res.success) {
+        setError(res.error || "Gagal menghapus kategori.");
+        setDeleteLoading(false);
+      } else {
+        setDeletingCat(null);
+        setDeleteLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setDeleteLoading(false);
+    }
+  };
+
   const handleVoidTx = async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin membatalkan transaksi ini? Transaksi yang dibatalkan tidak akan dihitung dalam saldo.")) return;
     await voidTransactionAction(id);
     router.refresh();
+  };
+
+  const handleDeleteTx = async () => {
+    if (!deletingTx) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await deleteTransactionAction(deletingTx.id);
+      if (!res.success) {
+        setError(res.error || "Gagal menghapus transaksi.");
+        setDeleteLoading(false);
+      } else {
+        setDeletingTx(null);
+        setDeleteLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setDeleteLoading(false);
+    }
   };
 
   const filteredCategories = categories.filter((c) => c.type === txType);
@@ -302,9 +365,22 @@ export function FinanceClientView({
                       <button
                         type="button"
                         onClick={() => handleVoidTx(tx.id)}
-                        className="text-rose-600 font-semibold"
+                        className="text-amber-600 font-semibold"
                       >
                         Batalkan
+                      </button>
+                    )}
+                    {tx.status === "BATAL" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setDeletingTx(tx);
+                        }}
+                        className="text-rose-600 font-semibold inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus</span>
                       </button>
                     )}
                   </div>
@@ -376,15 +452,31 @@ export function FinanceClientView({
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      {tx.status === "VALID" && (
-                        <button
-                          type="button"
-                          onClick={() => handleVoidTx(tx.id)}
-                          className="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg font-semibold"
-                        >
-                          Batalkan
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-1.5">
+                        {tx.status === "VALID" && (
+                          <button
+                            type="button"
+                            onClick={() => handleVoidTx(tx.id)}
+                            className="px-2.5 py-1 text-amber-700 hover:bg-amber-50 rounded-lg font-semibold"
+                            title="Batalkan Transaksi (Void)"
+                          >
+                            Batalkan
+                          </button>
+                        )}
+                        {tx.status === "BATAL" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(null);
+                              setDeletingTx(tx);
+                            }}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Hapus Permanen Transaksi Batal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -549,73 +641,253 @@ export function FinanceClientView({
         </div>
       )}
 
-      {/* MODAL: Tambah Kategori */}
+      {/* MODAL: Kelola Kategori Kas */}
       {catModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Tambah Kategori Kas</h3>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Kelola Kategori Kas</h3>
+                <p className="text-xs text-slate-500">Daftar kategori arus kas pemasukan dan pengeluaran</p>
+              </div>
               <button
                 type="button"
-                onClick={() => setCatModalOpen(false)}
+                onClick={() => {
+                  setCatModalOpen(false);
+                  setShowCatForm(false);
+                  setEditingCat(null);
+                }}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCatSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nama Kategori *</label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  placeholder="Contoh: Dana BOS / Konsumsi Latihan"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipe Kategori *</label>
-                <select
-                  name="type"
-                  required
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
-                >
-                  <option value="PEMASUKAN">Pemasukan (+)</option>
-                  <option value="PENGELUARAN">Pengeluaran (-)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Keterangan</label>
-                <textarea
-                  name="description"
-                  rows={2}
-                  placeholder="Deskripsi peruntukan kategori..."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setCatModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Simpan Kategori</span>
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between">
+                <span>{error}</span>
+                <button type="button" onClick={() => setError(null)}>
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </form>
+            )}
+
+            {!showCatForm && !editingCat ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase">
+                    Kategori Terdaftar ({categories.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCat(null);
+                      setShowCatForm(true);
+                      setError(null);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Kategori</span>
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+                  {categories.map((c) => (
+                    <div key={c.id} className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-slate-900">{c.name}</span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              c.type === "PEMASUKAN"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-rose-50 text-rose-700"
+                            }`}
+                          >
+                            {c.type}
+                          </span>
+                        </div>
+                        {c.description && <p className="text-[11px] text-slate-400 mt-0.5">{c.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCat(c);
+                            setShowCatForm(true);
+                            setError(null);
+                          }}
+                          className="p-1 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                          title="Ubah Kategori"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setDeletingCat(c);
+                          }}
+                          className="p-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Hapus Kategori"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {categories.length === 0 && (
+                    <div className="p-4 text-center text-xs text-slate-400">Belum ada kategori.</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <form key={editingCat ? editingCat.id : "new"} onSubmit={handleSaveCat} className="space-y-4">
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-bold text-slate-800">
+                    {editingCat ? "Ubah Data Kategori" : "Buat Kategori Baru"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCat(null);
+                      setShowCatForm(false);
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800 underline"
+                  >
+                    Kembali ke daftar
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nama Kategori *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    defaultValue={editingCat?.name || ""}
+                    placeholder="Contoh: Dana BOS / Konsumsi Latihan"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipe Kategori *</label>
+                  <select
+                    name="type"
+                    required
+                    defaultValue={editingCat?.type || "PEMASUKAN"}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
+                  >
+                    <option value="PEMASUKAN">Pemasukan (+)</option>
+                    <option value="PENGELUARAN">Pengeluaran (-)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Keterangan</label>
+                  <textarea
+                    name="description"
+                    rows={2}
+                    defaultValue={editingCat?.description || ""}
+                    placeholder="Deskripsi peruntukan kategori..."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCat(null);
+                      setShowCatForm(false);
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{editingCat ? "Simpan Perubahan" : "Simpan Kategori"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Konfirmasi Hapus Kategori */}
+      {deletingCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Hapus Kategori Kas?</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Apakah Anda yakin ingin menghapus kategori <strong>{deletingCat.name}</strong>? Kategori yang sudah memiliki riwayat transaksi tidak dapat dihapus.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingCat(null)}
+                className="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCat}
+                disabled={deleteLoading}
+                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Hapus</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Konfirmasi Hapus Transaksi Permanen */}
+      {deletingTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Hapus Transaksi Permanen?</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Transaksi <strong>{deletingTx.title}</strong> sebesar {formatRupiah(deletingTx.amount)} yang telah berstatus BATAL akan dihapus secara permanen dari basis data.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingTx(null)}
+                className="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Kembali
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTx}
+                disabled={deleteLoading}
+                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Hapus Permanen</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

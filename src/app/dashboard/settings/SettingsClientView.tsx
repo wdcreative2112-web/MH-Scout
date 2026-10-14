@@ -177,7 +177,7 @@ export function SettingsClientView({ profile }: SettingsClientViewProps) {
               <input
                 type="email"
                 name="email"
-                defaultValue={profile?.email || "gudep@pramukaone.id"}
+                defaultValue={profile?.email || "gudep@mhscout.id"}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
               />
             </div>

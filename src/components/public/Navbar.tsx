@@ -28,7 +28,7 @@ export function PublicNavbar() {
             </div>
             <div>
               <span className="text-xl sm:text-2xl font-black tracking-tight text-scout-900">
-                Pramuka<span className="text-scout-600">One</span>
+                MH <span className="text-scout-600">SCOUT</span>
               </span>
               <p className="text-[10px] font-semibold tracking-wider uppercase text-scout-600 -mt-1 hidden sm:block">
                 Pangkalan Gerakan Pramuka

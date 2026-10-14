@@ -20,10 +20,10 @@ export async function generateMetadata({
       include: { category: true },
     });
     if (!item || item.status !== "TERBIT") {
-      return { title: "Berita Tidak Ditemukan — PramukaOne" };
+      return { title: "Berita Tidak Ditemukan — MH SCOUT" };
     }
     return {
-      title: `${item.title} — PramukaOne`,
+      title: `${item.title} — MH SCOUT`,
       description: item.summary,
       openGraph: {
         title: item.title,
@@ -32,7 +32,7 @@ export async function generateMetadata({
       },
     };
   } catch {
-    return { title: "Warta Berita — PramukaOne" };
+    return { title: "Warta Berita — MH SCOUT" };
   }
 }
 

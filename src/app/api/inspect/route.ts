@@ -72,7 +72,7 @@ export async function GET() {
     result.aromixDbTest = { success: false, error: e.message };
   }
 
-  // Also test PramukaOne Neon HTTP & sync schema
+  // Also test MH SCOUT Neon HTTP & sync schema
   try {
     const { neon } = await import("@neondatabase/serverless");
     const sql = neon(process.env.DATABASE_URL || "");

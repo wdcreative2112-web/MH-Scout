@@ -16,13 +16,13 @@ export async function generateMetadata({
   const { slug } = await params;
   try {
     const album = await prisma.galleryAlbum.findUnique({ where: { slug } });
-    if (!album || !album.isPublished) return { title: "Album Tidak Ditemukan — PramukaOne" };
+    if (!album || !album.isPublished) return { title: "Album Tidak Ditemukan — MH SCOUT" };
     return {
-      title: `${album.title} — Galeri PramukaOne`,
+      title: `${album.title} — Galeri MH SCOUT`,
       description: album.description || "Dokumentasi kegiatan Pramuka",
     };
   } catch {
-    return { title: "Galeri Foto — PramukaOne" };
+    return { title: "Galeri Foto — MH SCOUT" };
   }
 }
 

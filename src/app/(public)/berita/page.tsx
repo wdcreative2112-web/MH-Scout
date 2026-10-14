@@ -57,7 +57,7 @@ export default async function BeritaListPage({
           Berita & Informasi Kegiatan
         </h1>
         <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-          Kabar terkini seputar aktivitas, prestasi, perkemahan, dan program pembinaan PramukaOne.
+          Kabar terkini seputar aktivitas, prestasi, perkemahan, dan program pembinaan MH SCOUT.
         </p>
       </div>
 

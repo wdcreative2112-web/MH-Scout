@@ -85,3 +85,60 @@ export async function updateGroupAction(id: string, formData: FormData) {
     return { success: false, error: "Gagal memperbarui regu." };
   }
 }
+
+export async function deleteGroupAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const group = await prisma.scoutGroup.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { members: true },
+        },
+      },
+    });
+
+    if (!group) {
+      return { success: false, error: "Regu tidak ditemukan." };
+    }
+
+    // Unassign members from this group so their member record remains safe
+    await prisma.member.updateMany({
+      where: { groupId: id },
+      data: { groupId: null },
+    });
+
+    // Unassign users who are assigned as ketua regu for this group
+    await prisma.user.updateMany({
+      where: { groupId: id },
+      data: { groupId: null },
+    });
+
+    await prisma.scoutGroup.delete({
+      where: { id },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_REGU",
+        module: "REGU",
+        details: `Menghapus regu: ${group.name} (${group.category})`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/groups");
+    revalidatePath("/dashboard/members");
+    revalidatePath("/dashboard/users");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Delete group error:", err);
+    return { success: false, error: "Gagal menghapus data regu dari database." };
+  }
+}
+

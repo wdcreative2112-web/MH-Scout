@@ -142,7 +142,7 @@ export function ReportsClientView({
       {/* Printable Report Header */}
       <div className="hidden print:block text-center border-b-2 border-slate-900 pb-4 mb-6">
         <h2 className="text-xl font-black uppercase tracking-tight">GERAKAN PRAMUKA GUGUS DEPAN</h2>
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">PRAMUKAONE PANGKALAN SEKOLAH</h3>
+        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">MH SCOUT PANGKALAN SEKOLAH</h3>
         <p className="text-xs text-slate-500 mt-1">Dicetak pada: {formatDate(new Date())}</p>
       </div>
 
@@ -151,49 +151,84 @@ export function ReportsClientView({
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Rekap Regu */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4 shadow-2xs">
               <h3 className="font-bold text-slate-900 text-base">Rekap Anggota per Regu / Sangga</h3>
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
-                    <th className="p-2.5">Nama Regu</th>
-                    <th className="p-2.5">Kategori</th>
-                    <th className="p-2.5 text-right">Jumlah Anggota</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {groups.map((g) => (
-                    <tr key={g.id}>
-                      <td className="p-2.5 font-bold text-slate-900">{g.name}</td>
-                      <td className="p-2.5 text-slate-600">{g.category}</td>
-                      <td className="p-2.5 text-right font-bold text-emerald-700">
-                        {g._count?.members || 0} orang
-                      </td>
+              
+              {/* Mobile View */}
+              <div className="sm:hidden space-y-2">
+                {groups.map((g) => (
+                  <div key={g.id} className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-bold text-slate-900">{g.name}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{g.category}</p>
+                    </div>
+                    <span className="font-black text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg text-xs">
+                      {g._count?.members || 0} orang
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
+                      <th className="p-2.5">Nama Regu</th>
+                      <th className="p-2.5">Kategori</th>
+                      <th className="p-2.5 text-right">Jumlah Anggota</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {groups.map((g) => (
+                      <tr key={g.id}>
+                        <td className="p-2.5 font-bold text-slate-900">{g.name}</td>
+                        <td className="p-2.5 text-slate-600">{g.category}</td>
+                        <td className="p-2.5 text-right font-bold text-emerald-700">
+                          {g._count?.members || 0} orang
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Rekap Tingkatan */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4 shadow-2xs">
               <h3 className="font-bold text-slate-900 text-base">Rekap Tingkatan Golongan</h3>
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
-                    <th className="p-2.5">Tingkatan Pramuka</th>
-                    <th className="p-2.5 text-right">Jumlah Anggota</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {Object.entries(levelStats).map(([lvl, count]) => (
-                    <tr key={lvl}>
-                      <td className="p-2.5 font-bold text-slate-900">{lvl}</td>
-                      <td className="p-2.5 text-right font-bold text-emerald-700">{count} orang</td>
+
+              {/* Mobile View */}
+              <div className="sm:hidden space-y-2">
+                {Object.entries(levelStats).map(([lvl, count]) => (
+                  <div key={lvl} className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs">
+                    <p className="font-bold text-slate-900">{lvl}</p>
+                    <span className="font-black text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg text-xs">
+                      {count} orang
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
+                      <th className="p-2.5">Tingkatan Pramuka</th>
+                      <th className="p-2.5 text-right">Jumlah Anggota</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {Object.entries(levelStats).map(([lvl, count]) => (
+                      <tr key={lvl}>
+                        <td className="p-2.5 font-bold text-slate-900">{lvl}</td>
+                        <td className="p-2.5 text-right font-bold text-emerald-700">{count} orang</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -217,32 +252,59 @@ export function ReportsClientView({
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-2xs">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4 shadow-2xs">
             <h3 className="font-bold text-slate-900 text-base">Rincian Per Kategori Transaksi</h3>
-            <table className="w-full text-xs text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
-                  <th className="p-2.5">Kategori</th>
-                  <th className="p-2.5">Jenis</th>
-                  <th className="p-2.5 text-right">Total Akumulasi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {financeSummary.catList.map((cat, idx) => (
-                  <tr key={idx}>
-                    <td className="p-2.5 font-bold text-slate-900">{cat.name}</td>
-                    <td className="p-2.5 text-slate-600">{cat.type}</td>
-                    <td
-                      className={`p-2.5 text-right font-black ${
-                        cat.type === "PEMASUKAN" ? "text-emerald-700" : "text-rose-700"
-                      }`}
-                    >
-                      {formatRupiah(cat.total)}
-                    </td>
+
+            {/* Mobile View */}
+            <div className="sm:hidden space-y-2">
+              {financeSummary.catList.map((cat, idx) => (
+                <div key={idx} className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between text-xs">
+                  <div>
+                    <p className="font-bold text-slate-900">{cat.name}</p>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mt-0.5 ${
+                      cat.type === "PEMASUKAN" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                    }`}>
+                      {cat.type}
+                    </span>
+                  </div>
+                  <span
+                    className={`font-black text-xs ${
+                      cat.type === "PEMASUKAN" ? "text-emerald-700" : "text-rose-700"
+                    }`}
+                  >
+                    {formatRupiah(cat.total)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase">
+                    <th className="p-2.5">Kategori</th>
+                    <th className="p-2.5">Jenis</th>
+                    <th className="p-2.5 text-right">Total Akumulasi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {financeSummary.catList.map((cat, idx) => (
+                    <tr key={idx}>
+                      <td className="p-2.5 font-bold text-slate-900">{cat.name}</td>
+                      <td className="p-2.5 text-slate-600">{cat.type}</td>
+                      <td
+                        className={`p-2.5 text-right font-black ${
+                          cat.type === "PEMASUKAN" ? "text-emerald-700" : "text-rose-700"
+                        }`}
+                      >
+                        {formatRupiah(cat.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

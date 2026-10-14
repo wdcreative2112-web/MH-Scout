@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useTransition } from "react";
+import React, { useState, useMemo, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   createMeetingAction,
@@ -41,6 +41,9 @@ import {
   Trophy,
   TrendingUp,
   AlertTriangle,
+  Lock,
+  Unlock,
+  CalendarClock,
 } from "lucide-react";
 
 interface RoutineScheduleConfig {
@@ -117,7 +120,7 @@ export function AttendanceClientView({
       startTime: "14:00",
       endTime: "16:30",
       location: "Lapangan Utama Pangkalan",
-      titleTemplate: "Latihan Rutin Minggu ke-{n}",
+      titleTemplate: "Latihan Rutin",
       isActive: true,
     }
   );
@@ -181,6 +184,62 @@ export function AttendanceClientView({
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Admin correction mode override for past meetings
+  const [adminCorrectionMode, setAdminCorrectionMode] = useState(false);
+
+  // Normalize today midnight
+  const today = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0, 0);
+  }, []);
+
+  // Normalize active session date midnight
+  const activeSessionDay = useMemo(() => {
+    if (!activeMeeting?.meetingDate) return null;
+    const d = new Date(activeMeeting.meetingDate);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  }, [activeMeeting]);
+
+  const isTodaySession = useMemo(() => {
+    if (!activeSessionDay) return false;
+    return activeSessionDay.getTime() === today.getTime();
+  }, [activeSessionDay, today]);
+
+  const isFutureSession = useMemo(() => {
+    if (!activeSessionDay) return false;
+    return activeSessionDay.getTime() > today.getTime();
+  }, [activeSessionDay, today]);
+
+  const isPastSession = useMemo(() => {
+    if (!activeSessionDay) return false;
+    return activeSessionDay.getTime() < today.getTime();
+  }, [activeSessionDay, today]);
+
+  const daysDiff = useMemo(() => {
+    if (!activeSessionDay) return 0;
+    return Math.round((activeSessionDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }, [activeSessionDay, today]);
+
+  // Reset admin correction mode on meeting change
+  useEffect(() => {
+    setAdminCorrectionMode(false);
+  }, [activeMeeting?.id]);
+
+  // Global attendance lock logic:
+  // - Future sessions: strictly locked for everyone (Admin, Sekretaris, Ketua Regu)
+  // - Past sessions: strictly locked for Ketua Regu; locked by default for Admin/Sekretaris unless adminCorrectionMode is enabled
+  // - Today session: open for attendance recording
+  const isAttendanceLocked = useMemo(() => {
+    if (!activeMeeting) return true;
+    if (activeMeeting.status === "DIBATALKAN") return true;
+    if (isFutureSession) return true;
+    if (isPastSession) {
+      if (isKetuaRegu) return true;
+      return !adminCorrectionMode;
+    }
+    return false;
+  }, [activeMeeting, isFutureSession, isPastSession, isKetuaRegu, adminCorrectionMode]);
 
   // Check unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -252,7 +311,7 @@ export function AttendanceClientView({
 
   // Set member status
   const handleSetStatus = (memberId: string, status: "HADIR" | "IZIN" | "SAKIT" | "ALPA") => {
-    if (!canEdit) return;
+    if (!canEdit || isAttendanceLocked) return;
     setAttendanceMap((prev) => ({
       ...prev,
       [memberId]: status,
@@ -274,6 +333,7 @@ export function AttendanceClientView({
 
   // Bulk mark all displayed members as HADIR
   const handleMarkAllHadir = () => {
+    if (!canEdit || isAttendanceLocked) return;
     if (!confirm("Tandai seluruh anggota yang tampil saat ini sebagai HADIR?")) return;
     const nextMap = { ...attendanceMap };
     displayedMembers.forEach((m) => {
@@ -285,7 +345,7 @@ export function AttendanceClientView({
 
   // Save attendance sheet to database
   const handleSaveAttendance = async () => {
-    if (!activeMeeting) return;
+    if (!activeMeeting || isAttendanceLocked) return;
     setSaveLoading(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -755,11 +815,30 @@ export function AttendanceClientView({
                     onChange={(e) => handleChangeMeeting(e.target.value)}
                     className="w-full pl-3.5 pr-10 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-slate-50/50 text-slate-900 shadow-2xs"
                   >
-                    {meetings.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {formatDayDate(m.meetingDate)} — {m.title} [{m.status}] ({m.records?.length || 0} Terabsen)
-                      </option>
-                    ))}
+                    {meetings.map((m) => {
+                      const mDate = new Date(m.meetingDate);
+                      const mDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+                      const isToday = mDay.getTime() === today.getTime();
+                      const isFuture = mDay.getTime() > today.getTime();
+                      const dDiff = Math.round((mDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                      let badge = "";
+                      if (m.status === "DIBATALKAN") {
+                        badge = "⛔ [BATAL]";
+                      } else if (isToday) {
+                        badge = "🟢 [HARI INI - AKTIF]";
+                      } else if (isFuture) {
+                        badge = `🔒 [TERKUNCI - H-${dDiff}]`;
+                      } else {
+                        badge = m.status === "SELESAI" ? "✅ [SELESAI]" : "📁 [ARSIP LAMPAU]";
+                      }
+
+                      return (
+                        <option key={m.id} value={m.id}>
+                          {badge} {formatDayDate(m.meetingDate)}
+                        </option>
+                      );
+                    })}
                     {meetings.length === 0 && <option value="">(Belum ada jadwal pertemuan)</option>}
                   </select>
                 </div>
@@ -901,6 +980,129 @@ export function AttendanceClientView({
                 </div>
               </div>
             )}
+
+            {/* FUTURE SESSION LOCK BANNER */}
+            {activeMeeting && isFutureSession && activeMeeting.status !== "DIBATALKAN" && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+                <div className="flex items-start gap-3.5">
+                  <div className="p-2.5 rounded-2xl bg-sky-100 text-sky-700 shrink-0 mt-0.5 border border-sky-200">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-black text-sm text-sky-950">SESI LATIHAN BELUM DIBUKA (TERKUNCI)</p>
+                      <span className="px-2.5 py-0.5 rounded-full bg-sky-200 text-sky-900 text-[10px] font-black uppercase tracking-wider">
+                        {daysDiff === 1 ? "Besok" : `H-${daysDiff} Hari Lagi`}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-sky-800 leading-relaxed">
+                      Sesi ini dijadwalkan pada hari <strong>{formatDayDate(activeMeeting.meetingDate)}</strong>.
+                      Demi menjaga kepatuhan dan integritas rekapitulasi, pengisian absensi <strong>hanya dapat diakses dan disimpan tepat pada Hari-H pelaksanaan latihan</strong> sesuai jadwal.
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 self-end sm:self-center">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-100/80 border border-sky-200 text-sky-800 text-xs font-bold">
+                    <CalendarClock className="w-4 h-4 text-sky-600" />
+                    <span>Akan Dibuka {formatDate(activeMeeting.meetingDate)}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* PAST SESSION: KETUA REGU READ-ONLY BANNER */}
+            {activeMeeting && isPastSession && activeMeeting.status !== "DIBATALKAN" && isKetuaRegu && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3 shadow-2xs">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div className="text-xs">
+                  <p className="font-black text-sm text-amber-950">SESI LATIHAN LAMPAU (ARSIP HANYA BACA)</p>
+                  <p className="mt-0.5 text-amber-800 leading-relaxed">
+                    Sesi latihan ini telah terlaksana pada <strong>{formatDayDate(activeMeeting.meetingDate)}</strong>.
+                    Sebagai Ketua Regu, data presensi ini terkunci dalam mode arsip untuk menjaga integritas rekapitulasi. Silakan hubungi Pembina / Admin jika diperlukan koreksi data.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* PAST SESSION: ADMIN LOCKED BANNER (DEFAULT) */}
+            {activeMeeting && isPastSession && activeMeeting.status !== "DIBATALKAN" && !isKetuaRegu && !adminCorrectionMode && (
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm text-amber-950">SESI LATIHAN TELAH LEWAT (ARSIP TERKUNCI)</p>
+                    <p className="mt-0.5 text-xs text-amber-800 leading-relaxed">
+                      Sesi ini dilaksanakan pada <strong>{formatDayDate(activeMeeting.meetingDate)}</strong>. Pengubahan data dikunci secara default untuk menjaga keabsahan data arsip.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAdminCorrectionMode(true)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Unlock className="w-4 h-4" />
+                  <span>Buka Mode Koreksi (Admin)</span>
+                </button>
+              </div>
+            )}
+
+            {/* PAST SESSION: ADMIN CORRECTION MODE ACTIVE */}
+            {activeMeeting && isPastSession && activeMeeting.status !== "DIBATALKAN" && !isKetuaRegu && adminCorrectionMode && (
+              <div className="p-4 rounded-2xl bg-amber-100 border-2 border-amber-400 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5">
+                    <Unlock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-black text-sm text-amber-950">MODE KOREKSI ADMIN AKTIF</p>
+                      <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 text-[10px] font-black uppercase tracking-wider">
+                        Override Diizinkan
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-amber-900 leading-relaxed">
+                      Anda sedang membuka kunci sesi lampau ({formatDayDate(activeMeeting.meetingDate)}) untuk keperluan revisi presensi. Seluruh modifikasi status kehadiran akan dicatat ke dalam audit log.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAdminCorrectionMode(false)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs shrink-0 flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Kunci Kembali</span>
+                </button>
+              </div>
+            )}
+
+            {/* TODAY ACTIVE SESSION BANNER */}
+            {activeMeeting && isTodaySession && activeMeeting.status !== "DIBATALKAN" && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                  <div>
+                    <p className="text-xs sm:text-sm font-black text-emerald-900 leading-tight">
+                      SESI LATIHAN HARI INI — PENGISIAN PRESENSI AKTIF
+                    </p>
+                    <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                      {formatDayDate(activeMeeting.meetingDate)} • Pukul {activeMeeting.startTime || "14:00"} - {activeMeeting.endTime || "16:30"} WIB
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 font-black text-[10px] uppercase hidden sm:inline-block">
+                  Terbuka Untuk Absensi
+                </span>
+              </div>
+            )}
           </div>
 
           {/* REALTIME ATTENDANCE LIVE COUNTERS */}
@@ -973,20 +1175,37 @@ export function AttendanceClientView({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  disabled={isAttendanceLocked}
                   onClick={handleMarkAllHadir}
-                  className="px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+                  className={`px-3.5 py-2.5 rounded-2xl border text-xs font-bold transition-colors shadow-2xs ${
+                    isAttendanceLocked
+                      ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                  }`}
+                  title={isAttendanceLocked ? "Sesi latihan terkunci untuk pengisian presensi" : undefined}
                 >
                   Tandai Semua Hadir
                 </button>
 
                 <button
                   type="button"
-                  disabled={saveLoading}
+                  disabled={saveLoading || isAttendanceLocked}
                   onClick={handleSaveAttendance}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs sm:text-sm shadow-md transition-all ${
+                    isAttendanceLocked
+                      ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                      : "bg-emerald-700 hover:bg-emerald-600 text-white active:scale-95 disabled:opacity-50"
+                  }`}
+                  title={isAttendanceLocked ? "Sesi latihan terkunci untuk pengisian presensi" : undefined}
                 >
-                  {saveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Simpan Absensi</span>
+                  {saveLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isAttendanceLocked ? (
+                    <Lock className="w-4 h-4" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>{isAttendanceLocked ? "Sesi Terkunci" : "Simpan Absensi"}</span>
                 </button>
               </div>
             )}
@@ -1037,11 +1256,13 @@ export function AttendanceClientView({
                     <div className="flex items-center gap-1.5 sm:gap-2 self-end md:self-center">
                       <button
                         type="button"
-                        disabled={!canEdit}
+                        disabled={!canEdit || isAttendanceLocked}
                         onClick={() => handleSetStatus(member.id, "HADIR")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                           currentStatus === "HADIR"
                             ? "bg-emerald-600 text-white shadow-xs scale-105"
+                            : isAttendanceLocked
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
                             : "bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
                         }`}
                       >
@@ -1050,11 +1271,13 @@ export function AttendanceClientView({
 
                       <button
                         type="button"
-                        disabled={!canEdit}
+                        disabled={!canEdit || isAttendanceLocked}
                         onClick={() => handleSetStatus(member.id, "IZIN")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                           currentStatus === "IZIN"
                             ? "bg-blue-600 text-white shadow-xs scale-105"
+                            : isAttendanceLocked
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
                             : "bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700"
                         }`}
                       >
@@ -1063,11 +1286,13 @@ export function AttendanceClientView({
 
                       <button
                         type="button"
-                        disabled={!canEdit}
+                        disabled={!canEdit || isAttendanceLocked}
                         onClick={() => handleSetStatus(member.id, "SAKIT")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                           currentStatus === "SAKIT"
                             ? "bg-amber-600 text-white shadow-xs scale-105"
+                            : isAttendanceLocked
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
                             : "bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-700"
                         }`}
                       >
@@ -1076,19 +1301,21 @@ export function AttendanceClientView({
 
                       <button
                         type="button"
-                        disabled={!canEdit}
+                        disabled={!canEdit || isAttendanceLocked}
                         onClick={() => handleSetStatus(member.id, "ALPA")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                           currentStatus === "ALPA"
                             ? "bg-rose-600 text-white shadow-xs scale-105"
+                            : isAttendanceLocked
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
                             : "bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700"
                         }`}
                       >
                         A (Alpa)
                       </button>
 
-                      {/* Button to add/edit note */}
-                      {canEdit && (
+                      {/* Button to add/edit/view note */}
+                      {(canEdit || note) && (
                         <button
                           type="button"
                           onClick={() =>
@@ -1102,9 +1329,12 @@ export function AttendanceClientView({
                           className={`p-2 rounded-xl text-xs transition-colors ${
                             note
                               ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              : isAttendanceLocked
+                              ? "bg-slate-100 text-slate-300 cursor-not-allowed"
                               : "bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200"
                           }`}
-                          title="Tambahkan catatan/keterangan izin/sakit"
+                          disabled={isAttendanceLocked && !note}
+                          title={isAttendanceLocked ? (note ? "Lihat catatan keterangan" : "Tidak dapat menambah catatan pada sesi terkunci") : "Tambahkan catatan/keterangan izin/sakit"}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                         </button>
@@ -1121,7 +1351,7 @@ export function AttendanceClientView({
           </div>
 
           {/* FLOATING BAR FOR UNSAVED CHANGES */}
-          {hasUnsavedChanges && (
+          {hasUnsavedChanges && !isAttendanceLocked && (
             <div className="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:right-8 z-40 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center justify-between sm:justify-start gap-4 border border-slate-700/80 animate-in slide-in-from-bottom duration-200">
               <div className="flex items-center gap-2.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
@@ -1303,17 +1533,43 @@ export function AttendanceClientView({
                     <div>
                       {/* Top Badges */}
                       <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                            meeting.status === "SELESAI"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : meeting.status === "DIBATALKAN"
-                              ? "bg-rose-100 text-rose-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {meeting.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                              meeting.status === "SELESAI"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : meeting.status === "DIBATALKAN"
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {meeting.status}
+                          </span>
+
+                          {(() => {
+                            const cardMDate = new Date(meeting.meetingDate);
+                            const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
+                            const isCardToday = cardMDay.getTime() === today.getTime();
+                            const isCardFuture = cardMDay.getTime() > today.getTime();
+                            const cardDaysDiff = Math.round((cardMDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                            if (isCardFuture && meeting.status !== "DIBATALKAN") {
+                              return (
+                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-sky-100 text-sky-800 inline-flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5" /> H-{cardDaysDiff}
+                                </span>
+                              );
+                            }
+                            if (isCardToday && meeting.status !== "DIBATALKAN") {
+                              return (
+                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                                  🟢 Hari Ini
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
 
                         <span className="text-[11px] font-semibold text-slate-500">
                           {formatDayDate(meeting.meetingDate)}
@@ -1322,7 +1578,9 @@ export function AttendanceClientView({
 
                       {/* Title & Agenda */}
                       <h4 className="font-black text-sm sm:text-base text-slate-900 mt-2.5 leading-snug">
-                        {meeting.title}
+                        {meeting.title && !meeting.title.toLowerCase().startsWith("latihan rutin minggu ke-")
+                          ? meeting.title
+                          : formatDayDate(meeting.meetingDate)}
                       </h4>
 
                       <div className="mt-2 space-y-1 text-xs text-slate-600">
@@ -1363,16 +1621,29 @@ export function AttendanceClientView({
 
                       {/* Action Row */}
                       <div className="flex items-center justify-between gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleChangeMeeting(meeting.id);
-                            setActiveTab("SHEET");
-                          }}
-                          className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs text-center transition-all shadow-2xs"
-                        >
-                          Buka Presensi
-                        </button>
+                        {(() => {
+                          const cardMDate = new Date(meeting.meetingDate);
+                          const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
+                          const isCardFuture = cardMDay.getTime() > today.getTime();
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleChangeMeeting(meeting.id);
+                                setActiveTab("SHEET");
+                              }}
+                              className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs text-center transition-all shadow-2xs inline-flex items-center justify-center gap-1.5 ${
+                                isCardFuture
+                                  ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                              }`}
+                            >
+                              {isCardFuture && <Lock className="w-3 h-3 text-slate-500" />}
+                              <span>{isCardFuture ? "Lihat Sesi (Terkunci)" : "Buka Presensi"}</span>
+                            </button>
+                          );
+                        })()}
 
                         {canEdit && !isKetuaRegu && (
                           <div className="flex items-center gap-1">
@@ -1617,8 +1888,103 @@ export function AttendanceClientView({
               )}
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            {/* Mobile Cards (Visible on small screens) */}
+            <div className="md:hidden space-y-3">
+              {filteredRecapMembers.length > 0 ? (
+                filteredRecapMembers.map((member, idx) => {
+                  let hCount = 0;
+                  let iCount = 0;
+                  let sCount = 0;
+                  let aCount = 0;
+
+                  validMeetings.forEach((m) => {
+                    const rec = m.records?.find((r: any) => r.memberId === member.id);
+                    if (rec?.status === "HADIR") hCount++;
+                    else if (rec?.status === "IZIN") iCount++;
+                    else if (rec?.status === "SAKIT") sCount++;
+                    else if (rec?.status === "ALPA") aCount++;
+                  });
+
+                  const percentage =
+                    validMeetings.length > 0
+                      ? Math.round((hCount / validMeetings.length) * 100)
+                      : 0;
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-3 hover:border-slate-300 transition-colors"
+                    >
+                      {/* Card Header: Avatar + Nama + Regu + Percentage Badge */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-900 font-black text-xs flex items-center justify-center shrink-0 border border-emerald-200/50">
+                            {member.fullName.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                              {member.fullName}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
+                              <span>#{idx + 1}</span>
+                              <span>•</span>
+                              <span className="font-mono">{member.memberNumber || "-"}</span>
+                              {member.group && (
+                                <>
+                                  <span>•</span>
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200/60">
+                                    {member.group.name}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`shrink-0 font-black px-2.5 py-1 rounded-xl text-xs shadow-2xs ${
+                            percentage >= 80
+                              ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                              : percentage >= 50
+                              ? "bg-amber-100 text-amber-900 border border-amber-200"
+                              : "bg-rose-100 text-rose-900 border border-rose-200"
+                          }`}
+                        >
+                          {percentage}%
+                        </span>
+                      </div>
+
+                      {/* Attendance Breakdown Grid: 4 Pills */}
+                      <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-center">
+                        <div className="p-2 rounded-xl bg-emerald-50/80 border border-emerald-100 text-emerald-950">
+                          <span className="text-[10px] font-bold text-emerald-700 block">Hadir</span>
+                          <span className="text-sm font-black text-emerald-900 block mt-0.5">{hCount}</span>
+                        </div>
+                        <div className="p-2 rounded-xl bg-blue-50/80 border border-blue-100 text-blue-950">
+                          <span className="text-[10px] font-bold text-blue-700 block">Izin</span>
+                          <span className="text-sm font-black text-blue-900 block mt-0.5">{iCount}</span>
+                        </div>
+                        <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-100 text-amber-950">
+                          <span className="text-[10px] font-bold text-amber-700 block">Sakit</span>
+                          <span className="text-sm font-black text-amber-900 block mt-0.5">{sCount}</span>
+                        </div>
+                        <div className="p-2 rounded-xl bg-rose-50/80 border border-rose-100 text-rose-950">
+                          <span className="text-[10px] font-bold text-rose-700 block">Alpa</span>
+                          <span className="text-sm font-black text-rose-900 block mt-0.5">{aCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
+                  Tidak ada data anggota yang sesuai.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-black uppercase tracking-wider text-[11px]">
@@ -2196,19 +2562,28 @@ export function AttendanceClientView({
               </p>
             </div>
 
+            {isAttendanceLocked && (
+              <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-[11px] flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                <span>Mode hanya-baca: Sesi terkunci untuk pengubahan data.</span>
+              </div>
+            )}
+
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                 Alasan / Catatan (misal: Demam, Acara Keluarga):
               </label>
               <input
                 type="text"
-                autoFocus
+                autoFocus={!isAttendanceLocked}
+                readOnly={isAttendanceLocked}
+                disabled={isAttendanceLocked}
                 value={editingNoteMember.note}
                 onChange={(e) =>
                   setEditingNoteMember({ ...editingNoteMember, note: e.target.value })
                 }
-                placeholder="Tuliskan keterangan..."
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                placeholder={isAttendanceLocked ? "(Tidak ada catatan khusus)" : "Tuliskan keterangan..."}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 disabled:bg-slate-50 disabled:text-slate-600"
               />
             </div>
 
@@ -2218,21 +2593,23 @@ export function AttendanceClientView({
                 onClick={() => setEditingNoteMember(null)}
                 className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
               >
-                Tutup
+                {isAttendanceLocked ? "Tutup" : "Batal"}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNotesMap((prev) => ({
-                    ...prev,
-                    [editingNoteMember.id]: editingNoteMember.note.trim(),
-                  }));
-                  setEditingNoteMember(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs"
-              >
-                Simpan Catatan
-              </button>
+              {!isAttendanceLocked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotesMap((prev) => ({
+                      ...prev,
+                      [editingNoteMember.id]: editingNoteMember.note.trim(),
+                    }));
+                    setEditingNoteMember(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs"
+                >
+                  Simpan Catatan
+                </button>
+              )}
             </div>
           </div>
         </div>

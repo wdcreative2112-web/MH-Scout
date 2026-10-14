@@ -38,8 +38,18 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
   const { email, password } = parseResult.data;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    const normalizedEmail = email.toLowerCase().trim();
+    const alternateEmail = normalizedEmail.includes("@mhscout.id")
+      ? normalizedEmail.replace("@mhscout.id", "@pramukaone.id")
+      : normalizedEmail.replace("@pramukaone.id", "@mhscout.id");
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          { email: alternateEmail },
+        ],
+      },
     });
 
     if (!user) {

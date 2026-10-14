@@ -1,6 +1,6 @@
-# PramukaOne — Sistem Manajemen Organisasi & Kegiatan Pramuka
+# MH SCOUT — Sistem Manajemen Organisasi & Kegiatan Pramuka
 
-**PramukaOne** adalah aplikasi web modern terpadu yang menggabungkan website publik profesional dan dashboard administrasi operasional kepramukaan untuk satu pangkalan atau gugus depan Gerakan Pramuka Indonesia.
+**MH SCOUT** adalah aplikasi web modern terpadu yang menggabungkan website publik profesional dan dashboard administrasi operasional kepramukaan untuk satu pangkalan atau gugus depan Gerakan Pramuka Indonesia.
 
 Aplikasi ini dirancang dengan pendekatan **Mobile-First Responsive Design** agar sangat nyaman digunakan oleh Pembina dan Pengurus melalui smartphone (HP) di lapangan maupun melalui desktop komputer di kantor sekretariat.
 
@@ -60,8 +60,8 @@ Tepat tiga peran pengguna dengan hak akses aman di sisi server:
 
 ### 2. Clone Repositori & Pasang Dependensi
 ```bash
-git clone https://github.com/username/pramukaone.git
-cd pramukaone
+git clone https://github.com/username/mh-scout.git
+cd mh-scout
 npm install
 ```
 
@@ -74,11 +74,11 @@ cp .env.example .env
 Buka file `.env` dan sesuaikan koneksi database Neon:
 ```env
 # Neon PostgreSQL
-DATABASE_URL="postgresql://username:password@ep-sample-pooler.ap-southeast-1.aws.neon.tech/pramukaone?sslmode=require"
-DIRECT_URL="postgresql://username:password@ep-sample.ap-southeast-1.aws.neon.tech/pramukaone?sslmode=require"
+DATABASE_URL="postgresql://username:password@ep-sample-pooler.ap-southeast-1.aws.neon.tech/mhscout?sslmode=require"
+DIRECT_URL="postgresql://username:password@ep-sample.ap-southeast-1.aws.neon.tech/mhscout?sslmode=require"
 
 # Secret Kunci Sesi (Gunakan string acak minimal 32 karakter)
-AUTH_SECRET="kunci-rahasia-sesi-pramukaone-minimal-32-karakter"
+AUTH_SECRET="kunci-rahasia-sesi-mhscout-minimal-32-karakter"
 
 # Base URL Aplikasi
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -104,9 +104,9 @@ npx tsx prisma/seed.ts
 Akun default yang terbentuk:
 | Peran | Email | Password |
 |---|---|---|
-| **Admin** | `admin@pramukaone.id` | `AdminPramuka123!` |
-| **Sekretaris** | `sekretaris@pramukaone.id` | `Sekretaris123!` |
-| **Bendahara** | `bendahara@pramukaone.id` | `Bendahara123!` |
+| **Admin** | `admin@mhscout.id` | `AdminPramuka123!` |
+| **Sekretaris** | `sekretaris@mhscout.id` | `Sekretaris123!` |
+| **Bendahara** | `bendahara@mhscout.id` | `Bendahara123!` |
 
 *(Catatan: Anda dapat langsung mengklik tombol demo di halaman login untuk mengisi email dan password secara otomatis).*
 
@@ -140,5 +140,4 @@ npm run build
 ---
 
 ## 📄 Lisensi
-Hak Cipta © 2026 PramukaOne. Dikembangkan untuk Gerakan Pramuka Indonesia.
-# MH-Scout
+Hak Cipta © 2026 MH SCOUT. Dikembangkan untuk Gerakan Pramuka Indonesia.

@@ -2,9 +2,27 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSkillRequirementAction, updateMemberSkillProgressAction } from "@/actions/skills";
+import {
+  createSkillRequirementAction,
+  updateSkillRequirementAction,
+  deleteSkillRequirementAction,
+  updateMemberSkillProgressAction,
+} from "@/actions/skills";
 import { formatDate } from "@/lib/utils";
-import { BookOpen, Plus, Award, CheckCircle, Clock, X, Loader2, User, Search } from "lucide-react";
+import {
+  BookOpen,
+  Plus,
+  Award,
+  CheckCircle,
+  Clock,
+  X,
+  Loader2,
+  User,
+  Search,
+  Edit2,
+  Trash2,
+  AlertCircle,
+} from "lucide-react";
 
 interface SkillsClientViewProps {
   requirements: any[];
@@ -25,10 +43,15 @@ export function SkillsClientView({
 
   const [activeTab, setActiveTab] = useState<"REQUIREMENTS" | "PROGRESS">("REQUIREMENTS");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingReq, setEditingReq] = useState<any | null>(null);
+  const [deletingReq, setDeletingReq] = useState<any | null>(null);
+
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [selectedReq, setSelectedReq] = useState<any | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Map progress: requirementId -> progress record
   const progressMap = React.useMemo(() => {
@@ -44,38 +67,101 @@ export function SkillsClientView({
     setActiveTab("PROGRESS");
   };
 
-  const handleCreateReq = async (e: React.FormEvent<HTMLFormElement>) => {
+  const openCreateReq = () => {
+    setEditingReq(null);
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const openEditReq = (req: any) => {
+    setEditingReq(req);
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const handleSaveReq = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+
     const formData = new FormData(e.currentTarget);
-    await createSkillRequirementAction(formData);
-    setModalOpen(false);
-    setLoading(false);
-    router.refresh();
+    try {
+      let res;
+      if (editingReq) {
+        res = await updateSkillRequirementAction(editingReq.id, formData);
+      } else {
+        res = await createSkillRequirementAction(formData);
+      }
+
+      if (!res.success) {
+        setError(res.error || "Gagal menyimpan syarat kecakapan.");
+        setLoading(false);
+      } else {
+        setModalOpen(false);
+        setEditingReq(null);
+        setLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReq = async () => {
+    if (!deletingReq) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await deleteSkillRequirementAction(deletingReq.id);
+      if (!res.success) {
+        setError(res.error || "Gagal menghapus butir syarat.");
+        setDeleteLoading(false);
+      } else {
+        setDeletingReq(null);
+        setDeleteLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setDeleteLoading(false);
+    }
   };
 
   const handleUpdateTest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedMemberId || !selectedReq) return;
     setLoading(true);
+    setError(null);
 
     const formData = new FormData(e.currentTarget);
     const status = formData.get("status") as "BELUM" | "PROSES" | "LULUS";
     const examinerName = formData.get("examinerName") as string;
     const notes = formData.get("notes") as string;
 
-    await updateMemberSkillProgressAction({
-      memberId: selectedMemberId,
-      requirementId: selectedReq.id,
-      status,
-      examinerName,
-      notes,
-    });
+    try {
+      const res = await updateMemberSkillProgressAction({
+        memberId: selectedMemberId,
+        requirementId: selectedReq.id,
+        status,
+        examinerName,
+        notes,
+      });
 
-    setTestModalOpen(false);
-    setSelectedReq(null);
-    setLoading(false);
-    router.refresh();
+      if (!res.success) {
+        setError(res.error || "Gagal memperbarui hasil uji.");
+        setLoading(false);
+      } else {
+        setTestModalOpen(false);
+        setSelectedReq(null);
+        setLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setLoading(false);
+    }
   };
 
   const selectedMember = members.find((m) => m.id === selectedMemberId);
@@ -88,7 +174,7 @@ export function SkillsClientView({
             Kecakapan Pramuka (SKU & SKK)
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pengelolaan butir syarat kecakapan umum dan pencatatan pengujian anggota
+            Pengelolaan materi syarat kecakapan umum/khusus dan rekap pengujian anggota
           </p>
         </div>
 
@@ -98,7 +184,9 @@ export function SkillsClientView({
               type="button"
               onClick={() => setActiveTab("REQUIREMENTS")}
               className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeTab === "REQUIREMENTS" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                activeTab === "REQUIREMENTS"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Daftar Materi
@@ -107,7 +195,9 @@ export function SkillsClientView({
               type="button"
               onClick={() => setActiveTab("PROGRESS")}
               className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeTab === "PROGRESS" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                activeTab === "PROGRESS"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               Uji Anggota
@@ -117,7 +207,7 @@ export function SkillsClientView({
           {canEdit && (
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={openCreateReq}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
@@ -127,25 +217,66 @@ export function SkillsClientView({
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button type="button" onClick={() => setError(null)}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {activeTab === "REQUIREMENTS" ? (
         /* TAB 1: DAFTAR MATERI */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {requirements.map((req) => (
             <div
               key={req.id}
-              className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between"
+              className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between hover:border-slate-300 transition-colors group"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
                     {req.type} • {req.golongan}
                   </span>
-                  <span className="font-mono text-xs font-bold text-slate-400">No. {req.number}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold text-slate-400">No. {req.number}</span>
+                    {canEdit && (
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditReq(req)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                          title="Ubah Butir Syarat"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setDeletingReq(req);
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Hapus Butir Syarat"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h3 className="font-bold text-sm text-slate-900">{req.title}</h3>
+                <h3 className="font-bold text-sm text-slate-900 leading-snug">{req.title}</h3>
                 <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{req.description}</p>
               </div>
-              {req.level && <span className="text-[11px] text-slate-400 font-medium">Tingkat: {req.level}</span>}
+              {req.level && (
+                <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
+                  Tingkat: <span className="font-semibold text-slate-700">{req.level}</span>
+                </div>
+              )}
             </div>
           ))}
           {requirements.length === 0 && (
@@ -164,7 +295,7 @@ export function SkillsClientView({
             <select
               value={selectedMemberId}
               onChange={(e) => handleSelectMember(e.target.value)}
-              className="w-full sm:w-80 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white"
+              className="w-full sm:w-80 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
             >
               <option value="">(Pilih Anggota Pramuka)</option>
               {members.map((m) => (
@@ -250,31 +381,53 @@ export function SkillsClientView({
         </div>
       )}
 
-      {/* MODAL: Tambah Butir Syarat */}
+      {/* MODAL: Tambah / Ubah Butir Syarat */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-base text-slate-900">Tambah Butir Syarat Kecakapan</h3>
-              <button type="button" onClick={() => setModalOpen(false)}>
-                <X className="w-5 h-5 text-slate-400" />
+              <h3 className="font-bold text-base text-slate-900">
+                {editingReq ? "Ubah Butir Syarat Kecakapan" : "Tambah Butir Syarat Kecakapan"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingReq(null);
+                }}
+              >
+                <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
               </button>
             </div>
-            <form onSubmit={handleCreateReq} className="space-y-3 text-xs">
+
+            <form
+              key={editingReq ? editingReq.id : "new"}
+              onSubmit={handleSaveReq}
+              className="space-y-3 text-xs"
+            >
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-bold text-slate-700 uppercase mb-1">Tipe</label>
-                  <select name="type" className="w-full p-2 border border-slate-300 rounded-xl bg-white">
+                  <select
+                    name="type"
+                    defaultValue={editingReq?.type || "SKU"}
+                    className="w-full p-2 border border-slate-300 rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  >
                     <option value="SKU">SKU (Umum)</option>
                     <option value="SKK">SKK (Khusus)</option>
                   </select>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 uppercase mb-1">Golongan</label>
-                  <select name="golongan" className="w-full p-2 border border-slate-300 rounded-xl bg-white">
+                  <select
+                    name="golongan"
+                    defaultValue={editingReq?.golongan || "Penggalang"}
+                    className="w-full p-2 border border-slate-300 rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  >
                     <option value="Penggalang">Penggalang</option>
                     <option value="Penegak">Penegak</option>
                     <option value="Siaga">Siaga</option>
+                    <option value="Pandega">Pandega</option>
                   </select>
                 </div>
               </div>
@@ -287,8 +440,8 @@ export function SkillsClientView({
                     name="number"
                     required
                     min="1"
-                    defaultValue={requirements.length + 1}
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    defaultValue={editingReq ? editingReq.number : requirements.length + 1}
+                    className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                   />
                 </div>
                 <div>
@@ -296,8 +449,9 @@ export function SkillsClientView({
                   <input
                     type="text"
                     name="level"
+                    defaultValue={editingReq?.level || ""}
                     placeholder="Ramu / Rakit / Terap"
-                    className="w-full p-2 border border-slate-300 rounded-xl"
+                    className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                   />
                 </div>
               </div>
@@ -308,8 +462,9 @@ export function SkillsClientView({
                   type="text"
                   name="title"
                   required
+                  defaultValue={editingReq?.title || ""}
                   placeholder="Contoh: Menguasai Kompas & Peta Pita"
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
 
@@ -319,21 +474,30 @@ export function SkillsClientView({
                   name="description"
                   required
                   rows={3}
+                  defaultValue={editingReq?.description || ""}
                   placeholder="Detail yang harus dipraktikkan anggota..."
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-600 font-bold"
+                  onClick={() => {
+                    setModalOpen(false);
+                    setEditingReq(null);
+                  }}
+                  className="px-3 py-1.5 text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
                 >
                   Batal
                 </button>
-                <button type="submit" className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded-xl">
-                  Simpan
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingReq ? "Simpan Perubahan" : "Simpan Materi"}</span>
                 </button>
               </div>
             </form>
@@ -344,11 +508,11 @@ export function SkillsClientView({
       {/* MODAL: Uji Anggota */}
       {testModalOpen && selectedReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="font-bold text-base text-slate-900">Uji Syarat Kecakapan</h3>
               <button type="button" onClick={() => setTestModalOpen(false)}>
-                <X className="w-5 h-5 text-slate-400" />
+                <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
               </button>
             </div>
             <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1">
@@ -358,7 +522,11 @@ export function SkillsClientView({
             <form onSubmit={handleUpdateTest} className="space-y-3 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 uppercase mb-1">Hasil Pengujian *</label>
-                <select name="status" className="w-full p-2 border border-slate-300 rounded-xl bg-white">
+                <select
+                  name="status"
+                  defaultValue={progressMap[selectedReq.id]?.status || "LULUS"}
+                  className="w-full p-2 border border-slate-300 rounded-xl bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                >
                   <option value="LULUS">Lulus (Selesai Diuji)</option>
                   <option value="PROSES">Dalam Proses Pengujian</option>
                   <option value="BELUM">Belum Lulus</option>
@@ -369,8 +537,9 @@ export function SkillsClientView({
                 <input
                   type="text"
                   name="examinerName"
+                  defaultValue={progressMap[selectedReq.id]?.examinerName || ""}
                   placeholder="Kak Pembina Satuan"
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
               <div>
@@ -378,23 +547,64 @@ export function SkillsClientView({
                 <textarea
                   name="notes"
                   rows={2}
+                  defaultValue={progressMap[selectedReq.id]?.notes || ""}
                   placeholder="Catatan nilai atau aspek yang perlu ditingkatkan..."
-                  className="w-full p-2 border border-slate-300 rounded-xl"
+                  className="w-full p-2 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setTestModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-600 font-bold"
+                  className="px-3 py-1.5 text-slate-600 font-bold hover:bg-slate-100 rounded-xl"
                 >
                   Batal
                 </button>
-                <button type="submit" className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded-xl">
-                  Simpan Hasil Uji
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Simpan Hasil Uji</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Butir Syarat */}
+      {deletingReq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Hapus Butir Syarat?</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Syarat <strong>{deletingReq.type} #{deletingReq.number} - {deletingReq.title}</strong> beserta riwayat kelulusan anggota terkait akan dihapus permanen.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingReq(null)}
+                className="w-full py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteReq}
+                disabled={deleteLoading}
+                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Hapus Syarat</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

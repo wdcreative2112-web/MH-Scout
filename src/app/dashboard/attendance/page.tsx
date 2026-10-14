@@ -26,12 +26,36 @@ export default async function AttendancePage({
     await syncRoutineMeetings().catch(() => {});
     routineConfig = await getRoutineScheduleConfig();
 
-    meetings = await prisma.attendanceMeeting.findMany({
+    const allMeetings = await prisma.attendanceMeeting.findMany({
       orderBy: { meetingDate: "desc" },
       include: {
         records: true,
       },
     });
+
+    // Bersihkan sesi ganda pada tanggal yang sama yang belum memiliki data absensi
+    const seenDates = new Set<string>();
+    const duplicateIdsToDelete: string[] = [];
+    const uniqueMeetings: any[] = [];
+
+    for (const m of allMeetings) {
+      const d = new Date(m.meetingDate);
+      const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (seenDates.has(dateKey) && (!m.records || m.records.length === 0)) {
+        duplicateIdsToDelete.push(m.id);
+        continue;
+      }
+      seenDates.add(dateKey);
+      uniqueMeetings.push(m);
+    }
+
+    if (duplicateIdsToDelete.length > 0) {
+      await prisma.attendanceMeeting.deleteMany({
+        where: { id: { in: duplicateIdsToDelete } },
+      }).catch(() => {});
+    }
+
+    meetings = uniqueMeetings;
 
     groups = await prisma.scoutGroup.findMany({
       where: { isActive: true },
@@ -44,8 +68,16 @@ export default async function AttendancePage({
       include: { group: true },
     });
 
-    // Default to first meeting if meetingId not in query
-    const targetMeetingId = meetingId || (meetings.length > 0 ? meetings[0].id : null);
+    // Default to today's meeting if any exists, otherwise first meeting in list
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayMeeting = meetings.find((m) => {
+      const md = new Date(m.meetingDate);
+      const mDay = new Date(md.getFullYear(), md.getMonth(), md.getDate(), 0, 0, 0, 0);
+      return mDay.getTime() === today.getTime();
+    });
+
+    const targetMeetingId = meetingId || (todayMeeting ? todayMeeting.id : (meetings.length > 0 ? meetings[0].id : null));
 
     if (targetMeetingId) {
       activeMeeting = meetings.find((m) => m.id === targetMeetingId) || null;

@@ -11,7 +11,7 @@ export interface UploadResult {
 }
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export function validateImage(file: { type: string; size: number }): { valid: boolean; error?: string } {
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -24,11 +24,169 @@ export function validateImage(file: { type: string; size: number }): { valid: bo
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: "Ukuran file terlalu besar. Maksimum ukuran adalah 5 MB.",
+      error: "Ukuran file terlalu besar. Maksimum ukuran adalah 10 MB.",
     };
   }
 
   return { valid: true };
+}
+
+// Helper untuk memeriksa apakah kredensial Neon Object Storage aktif
+export function isNeonStorageConfigured(): boolean {
+  return (
+    process.env.IMAGE_STORAGE_PROVIDER === "neon" &&
+    Boolean(process.env.AWS_ENDPOINT_URL_S3) &&
+    Boolean(process.env.AWS_ACCESS_KEY_ID) &&
+    Boolean(process.env.AWS_SECRET_ACCESS_KEY)
+  );
+}
+
+function hmac(key: Buffer | string, data: string | Buffer): Buffer {
+  return crypto.createHmac("sha256", key).update(data).digest();
+}
+
+function sha256(data: string | Buffer): string {
+  return crypto.createHash("sha256").update(data).digest("hex");
+}
+
+function getSigningKey(secretKey: string, dateStamp: string, region: string, service: string): Buffer {
+  const kDate = hmac("AWS4" + secretKey, dateStamp);
+  const kRegion = hmac(kDate, region);
+  const kService = hmac(kRegion, service);
+  return hmac(kService, "aws4_request");
+}
+
+// Upload langsung ke S3 / Neon Object Storage tanpa external SDK
+async function uploadToNeonS3Native(
+  buffer: Buffer,
+  key: string,
+  contentType: string
+): Promise<string> {
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3!.replace(/\/$/, "");
+  const region = process.env.AWS_REGION || "ap-southeast-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
+  const bucket = process.env.NEON_STORAGE_BUCKET || "uploads";
+
+  const urlObj = new URL(`${endpoint}/${bucket}/${key}`);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.substring(0, 8);
+
+  const payloadHash = sha256(buffer);
+
+  const canonicalHeaders =
+    `content-type:${contentType}\n` +
+    `host:${urlObj.host}\n` +
+    `x-amz-content-sha256:${payloadHash}\n` +
+    `x-amz-date:${amzDate}\n`;
+
+  const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+
+  const canonicalRequest =
+    `PUT\n` +
+    urlObj.pathname + `\n` +
+    `\n` +
+    canonicalHeaders + `\n` +
+    signedHeaders + `\n` +
+    payloadHash;
+
+  const algorithm = "AWS4-HMAC-SHA256";
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign =
+    `${algorithm}\n` +
+    `${amzDate}\n` +
+    `${credentialScope}\n` +
+    sha256(canonicalRequest);
+
+  const signingKey = getSigningKey(secretAccessKey, dateStamp, region, "s3");
+  const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
+
+  const authorizationHeader =
+    `${algorithm} Credential=${accessKeyId}/${credentialScope}, ` +
+    `SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(urlObj.toString(), {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+      "host": urlObj.host,
+      "x-amz-date": amzDate,
+      "x-amz-content-sha256": payloadHash,
+      "Authorization": authorizationHeader,
+    },
+    body: new Uint8Array(buffer),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Neon S3 upload failed (${response.status}): ${errorText}`);
+  }
+
+  return urlObj.toString();
+}
+
+async function deleteFromNeonS3Native(urlOrKey: string): Promise<boolean> {
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3!.replace(/\/$/, "");
+  const region = process.env.AWS_REGION || "ap-southeast-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
+  const bucket = process.env.NEON_STORAGE_BUCKET || "uploads";
+
+  let key = urlOrKey;
+  if (urlOrKey.includes(`/${bucket}/`)) {
+    key = urlOrKey.split(`/${bucket}/`)[1];
+  } else if (urlOrKey.startsWith("http")) {
+    key = path.basename(urlOrKey);
+  }
+
+  const urlObj = new URL(`${endpoint}/${bucket}/${key}`);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.substring(0, 8);
+  const payloadHash = sha256("");
+
+  const canonicalHeaders =
+    `host:${urlObj.host}\n` +
+    `x-amz-content-sha256:${payloadHash}\n` +
+    `x-amz-date:${amzDate}\n`;
+
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+
+  const canonicalRequest =
+    `DELETE\n` +
+    urlObj.pathname + `\n` +
+    `\n` +
+    canonicalHeaders + `\n` +
+    signedHeaders + `\n` +
+    payloadHash;
+
+  const algorithm = "AWS4-HMAC-SHA256";
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign =
+    `${algorithm}\n` +
+    `${amzDate}\n` +
+    `${credentialScope}\n` +
+    sha256(canonicalRequest);
+
+  const signingKey = getSigningKey(secretAccessKey, dateStamp, region, "s3");
+  const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
+
+  const authorizationHeader =
+    `${algorithm} Credential=${accessKeyId}/${credentialScope}, ` +
+    `SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(urlObj.toString(), {
+    method: "DELETE",
+    headers: {
+      "host": urlObj.host,
+      "x-amz-date": amzDate,
+      "x-amz-content-sha256": payloadHash,
+      "Authorization": authorizationHeader,
+    },
+  });
+
+  return response.ok;
 }
 
 export async function uploadImage(file: File): Promise<UploadResult> {
@@ -40,17 +198,33 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Generate safe unique filename
+  // Generate nama unik untuk berkas
   const ext = path.extname(file.name) || ".jpg";
   const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
 
-  // Default provider: Local filesystem storage in public/uploads
+  // 1. Opsi Utama: Neon S3 Object Storage (Native, Zero Dependency)
+  if (isNeonStorageConfigured()) {
+    try {
+      const publicUrl = await uploadToNeonS3Native(buffer, `uploads/${uniqueName}`, file.type);
+      return {
+        url: publicUrl,
+        fileName: uniqueName,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size,
+      };
+    } catch (err: any) {
+      console.error("Neon S3 upload failed, falling back to local storage:", err);
+    }
+  }
+
+  // 2. Opsi Fallback: Penyimpanan Lokal Fisik (public/uploads)
   const uploadDir = path.join(process.cwd(), "public", "uploads");
 
   try {
     await fs.mkdir(uploadDir, { recursive: true });
   } catch {
-    // directory already exists or created
+    // folder sudah ada
   }
 
   const filePath = path.join(uploadDir, uniqueName);
@@ -68,6 +242,23 @@ export async function uploadImage(file: File): Promise<UploadResult> {
 }
 
 export async function deleteImage(urlOrFileName: string): Promise<boolean> {
+  if (!urlOrFileName) return false;
+
+  // Jika URL mengarah ke Neon S3 Object Storage
+  const isS3Url =
+    urlOrFileName.startsWith("http://") ||
+    urlOrFileName.startsWith("https://") ||
+    urlOrFileName.includes("neon.tech");
+
+  if (isNeonStorageConfigured() && isS3Url) {
+    try {
+      return await deleteFromNeonS3Native(urlOrFileName);
+    } catch (err) {
+      console.error("Neon S3 delete failed:", err);
+    }
+  }
+
+  // Fallback penghapusan berkas lokal
   try {
     const fileName = path.basename(urlOrFileName);
     const filePath = path.join(process.cwd(), "public", "uploads", fileName);

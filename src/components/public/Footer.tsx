@@ -16,7 +16,7 @@ export function PublicFooter() {
                 <Compass className="w-6 h-6 text-amber-300" />
               </div>
               <span className="text-2xl font-black tracking-tight text-white">
-                Pramuka<span className="text-scout-400">One</span>
+                MH <span className="text-scout-400">SCOUT</span>
               </span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed max-w-md">
@@ -75,7 +75,7 @@ export function PublicFooter() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>sekretariat@pramukaone.id</span>
+                <span>sekretariat@mhscout.id</span>
               </li>
               <li className="pt-2">
                 <Link
@@ -90,7 +90,7 @@ export function PublicFooter() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-scout-900/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© {currentYear} PramukaOne. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>© {currentYear} MH SCOUT. Hak Cipta Dilindungi Undang-Undang.</p>
           <p className="flex items-center gap-1">
             Dibangun untuk kemajuan Gerakan Pramuka Indonesia
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />

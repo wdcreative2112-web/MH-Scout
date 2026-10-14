@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createGroupAction, updateGroupAction } from "@/actions/groups";
-import { Shield, Plus, Edit2, Users, User, X, Loader2, AlertCircle } from "lucide-react";
+import { createGroupAction, updateGroupAction, deleteGroupAction } from "@/actions/groups";
+import { Shield, Plus, Edit2, Trash2, Users, User, X, Loader2, AlertCircle } from "lucide-react";
 
 interface GroupsClientViewProps {
   initialGroups: any[];
@@ -15,7 +15,9 @@ export function GroupsClientView({ initialGroups, leaders, canEdit }: GroupsClie
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openAdd = () => {
@@ -57,6 +59,27 @@ export function GroupsClientView({ initialGroups, leaders, canEdit }: GroupsClie
     } catch {
       setError("Terjadi kesalahan jaringan.");
       setLoading(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!deletingGroup) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const res = await deleteGroupAction(deletingGroup.id);
+      if (!res.success) {
+        setError(res.error || "Gagal menghapus regu.");
+        setDeleteLoading(false);
+      } else {
+        setDeletingGroup(null);
+        setDeleteLoading(false);
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setDeleteLoading(false);
     }
   };
 
@@ -128,7 +151,7 @@ export function GroupsClientView({ initialGroups, leaders, canEdit }: GroupsClie
               </div>
 
               {canEdit && (
-                <div className="pt-3 border-t border-slate-100 text-right">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-1.5">
                   <button
                     type="button"
                     onClick={() => openEdit(group)}
@@ -136,6 +159,17 @@ export function GroupsClientView({ initialGroups, leaders, canEdit }: GroupsClie
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Ubah Regu</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeletingGroup(group);
+                      setError(null);
+                    }}
+                    className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                    title="Hapus Regu"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               )}
@@ -251,6 +285,50 @@ export function GroupsClientView({ initialGroups, leaders, canEdit }: GroupsClie
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Konfirmasi Hapus Regu */}
+      {deletingGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-bold text-base text-slate-900">Hapus Data Regu?</h3>
+              <p className="text-xs text-slate-500">
+                Apakah Anda yakin ingin menghapus <span className="font-bold text-slate-800">{deletingGroup.name}</span> ({deletingGroup.category})? Anggota di regu ini akan dilepaskan status regunya (tidak terhapus).
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingGroup(null)}
+                className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteGroup}
+                disabled={deleteLoading}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{deleteLoading ? "Menghapus..." : "Ya, Hapus Regu"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

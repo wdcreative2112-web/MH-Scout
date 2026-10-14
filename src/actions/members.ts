@@ -158,3 +158,51 @@ export async function toggleMemberStatusAction(id: string, newStatus: "AKTIF" | 
     return { success: false, error: "Gagal mengubah status anggota." };
   }
 }
+
+export async function deleteMemberAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak: Hanya Admin dan Sekretaris yang dapat menghapus data anggota." };
+  }
+
+  try {
+    const member = await prisma.member.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, memberNumber: true },
+    });
+
+    if (!member) {
+      return { success: false, error: "Anggota tidak ditemukan." };
+    }
+
+    // Clean up attendance audit logs referencing this member if any
+    await prisma.attendanceAuditLog.deleteMany({
+      where: { memberId: id },
+    }).catch(() => {});
+
+    // Delete member (cascades to attendance records, dues payments, skill progress per prisma schema)
+    await prisma.member.delete({
+      where: { id },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_ANGGOTA",
+        module: "ANGGOTA",
+        details: `Menghapus anggota: ${member.fullName} (${member.memberNumber})`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/members");
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/dues");
+    revalidatePath("/dashboard/skills");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Delete member error:", err);
+    return { success: false, error: "Gagal menghapus data anggota dari database." };
+  }
+}
+

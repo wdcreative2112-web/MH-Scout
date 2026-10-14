@@ -371,6 +371,31 @@ export async function saveBatchAttendanceAction(data: {
       return { success: false, error: "Pertemuan latihan tidak ditemukan." };
     }
 
+    if (meeting.status === "DIBATALKAN") {
+      return { success: false, error: "Pertemuan ini telah dibatalkan dan tidak dapat diabsen." };
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const mDate = new Date(meeting.meetingDate);
+    const sessionDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+
+    // 1. Sesi masa depan dilarang diisi sebelum hari H tiba
+    if (sessionDay.getTime() > today.getTime()) {
+      return {
+        success: false,
+        error: "Sesi latihan ini belum dibuka. Pengisian presensi hanya dapat dilakukan tepat pada hari pelaksanaan pertemuan yang telah ditentukan.",
+      };
+    }
+
+    // 2. Sesi masa lampau tidak boleh diubah oleh KETUA_REGU
+    if (sessionDay.getTime() < today.getTime() && session.role === "KETUA_REGU") {
+      return {
+        success: false,
+        error: "Sesi latihan lampau telah dikunci. Hanya Pembina / Admin yang berwenang membuka koreksi data presensi yang telah lewat.",
+      };
+    }
+
     // Run database transactions for atomic persistence
     await prisma.$transaction(async (tx: any) => {
       for (const rec of records) {

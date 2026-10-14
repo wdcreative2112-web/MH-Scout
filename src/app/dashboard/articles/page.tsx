@@ -9,11 +9,19 @@ export default async function ArticlesDashboardPage() {
   const session = await getSession();
 
   let articles: any[] = [];
+  let categories: any[] = [];
   try {
-    articles = await prisma.article.findMany({
-      orderBy: { createdAt: "desc" },
-      include: { category: true, author: true },
-    });
+    const [fetchedArticles, fetchedCategories] = await Promise.all([
+      prisma.article.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { category: true, author: true },
+      }),
+      prisma.articleCategory.findMany({
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    articles = fetchedArticles;
+    categories = fetchedCategories;
   } catch {
     // fallback
   }
@@ -22,7 +30,11 @@ export default async function ArticlesDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <ArticleManagerView initialArticles={articles} canEdit={canEdit} />
+      <ArticleManagerView
+        initialArticles={articles}
+        categories={categories}
+        canEdit={canEdit}
+      />
     </div>
   );
 }

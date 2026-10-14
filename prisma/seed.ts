@@ -30,7 +30,7 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Memulai proses seeding database PramukaOne...");
+  console.log("Memulai proses seeding database MH SCOUT...");
 
   // 1. Hash Passwords
   const adminPassword = await bcrypt.hash("AdminPramuka123!", 10);
@@ -39,11 +39,11 @@ async function main() {
 
   // 2. Seed Users
   const admin = await prisma.user.upsert({
-    where: { email: "admin@pramukaone.id" },
+    where: { email: "admin@mhscout.id" },
     update: {},
     create: {
       name: "Kak Budi Santoso (Admin)",
-      email: "admin@pramukaone.id",
+      email: "admin@mhscout.id",
       password: adminPassword,
       role: "ADMIN",
       isActive: true,
@@ -52,11 +52,11 @@ async function main() {
   });
 
   const sekretaris = await prisma.user.upsert({
-    where: { email: "sekretaris@pramukaone.id" },
+    where: { email: "sekretaris@mhscout.id" },
     update: {},
     create: {
       name: "Kak Siti Rahmawati (Sekretaris)",
-      email: "sekretaris@pramukaone.id",
+      email: "sekretaris@mhscout.id",
       password: sekretarisPassword,
       role: "SEKRETARIS",
       isActive: true,
@@ -65,11 +65,11 @@ async function main() {
   });
 
   const bendahara = await prisma.user.upsert({
-    where: { email: "bendahara@pramukaone.id" },
+    where: { email: "bendahara@mhscout.id" },
     update: {},
     create: {
       name: "Kak Hendra Wijaya (Bendahara)",
-      email: "bendahara@pramukaone.id",
+      email: "bendahara@mhscout.id",
       password: bendaharaPassword,
       role: "BENDAHARA",
       isActive: true,
@@ -97,7 +97,7 @@ async function main() {
         "1. Menyelenggarakan latihan mingguan yang edukatif dan menantang.\n2. Mengamalkan Dasa Darma dan Tri Satya dalam kehidupan sehari-hari.\n3. Mengembangkan kecakapan umum dan khusus peserta didik.",
       address: "Jl. Pramuka No. 1, Kompleks Kampus Sekolah",
       phone: "+62 812-3456-7890",
-      email: "sekretariat@pramukaone.id",
+      email: "sekretariat@mhscout.id",
       initialBalance: 2500000, // Rp 2.500.000
     },
   });
@@ -113,7 +113,7 @@ async function main() {
       gender: "L",
       position: "Ketua Gugus Depan (Ka Gudep)",
       phone: "081211112222",
-      email: "budi@pramukaone.id",
+      email: "budi@mhscout.id",
     },
   });
 
@@ -127,7 +127,7 @@ async function main() {
       gender: "P",
       position: "Pembina Satuan Putri",
       phone: "081233334444",
-      email: "siti@pramukaone.id",
+      email: "siti@mhscout.id",
     },
   });
 
@@ -141,7 +141,7 @@ async function main() {
       gender: "L",
       position: "Pembina Satuan Putra",
       phone: "081255556666",
-      email: "hendra@pramukaone.id",
+      email: "hendra@mhscout.id",
     },
   });
 
@@ -185,11 +185,11 @@ async function main() {
   // Seed demo Ketua Regu (PINRU)
   const pinruPassword = await bcrypt.hash("Pinru123!", 10);
   await prisma.user.upsert({
-    where: { email: "pinru.rajawali@pramukaone.id" },
+    where: { email: "pinru.rajawali@mhscout.id" },
     update: { groupId: groupRajawali.id },
     create: {
       name: "Ahmad Fauzi (Pinru Rajawali)",
-      email: "pinru.rajawali@pramukaone.id",
+      email: "pinru.rajawali@mhscout.id",
       password: pinruPassword,
       role: "KETUA_REGU",
       groupId: groupRajawali.id,
@@ -452,7 +452,7 @@ async function main() {
       summary:
         "Sebanyak 24 pimpinan dan wakil pimpinan regu penggalang mengikuti pembekalan kepemimpinan, tata kelola administrasi regu, dan teknik penjelajahan.",
       content:
-        "Gugus Depan PramukaOne menggelar Gladian Pemimpin Regu (Dianpinru) bertempat di lingkungan sekolah pada akhir pekan lalu. Kegiatan dibuka langsung oleh Ketua Majelis Pembimbing Gugus Depan dan dihadiri seluruh pembina satuan.\n\nDalam kegiatan ini, adik-adik pemimpin regu dibekali keterampilan manajemen regu, pembagian tugas saat perkemahan, serta simulasi pertolongan pertama (P3K). Diharapkan setiap pemimpin regu mampu membawa regunya menjadi lebih solid, disiplin, dan berprestasi.",
+        "Gugus Depan MH SCOUT menggelar Gladian Pemimpin Regu (Dianpinru) bertempat di lingkungan sekolah pada akhir pekan lalu. Kegiatan dibuka langsung oleh Ketua Majelis Pembimbing Gugus Depan dan dihadiri seluruh pembina satuan.\n\nDalam kegiatan ini, adik-adik pemimpin regu dibekali keterampilan manajemen regu, pembagian tugas saat perkemahan, serta simulasi pertolongan pertama (P3K). Diharapkan setiap pemimpin regu mampu membawa regunya menjadi lebih solid, disiplin, dan berprestasi.",
       status: "TERBIT",
       publishedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
       coverImage: "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&auto=format&fit=crop&q=80",
@@ -532,7 +532,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  console.log("Seeding database PramukaOne berhasil diselesaikan dengan sukses!");
+  console.log("Seeding database MH SCOUT berhasil diselesaikan dengan sukses!");
 }
 
 main()

@@ -18,11 +18,11 @@ export default async function ProfilPage() {
     // DB fallback
   }
 
-  const name = profile?.name || "Gugus Depan PramukaOne";
+  const name = profile?.name || "Gugus Depan MH SCOUT";
   const pangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";
   const description =
     profile?.description ||
-    "PramukaOne adalah wadah pembinaan kepramukaan yang bertekad membentuk generasi muda Indonesia yang beriman, bertakwa, berakhlak mulia, berjiwa patriotik, taat hukum, disiplin, menjunjung tinggi nilai-nilai luhur bangsa, serta memiliki kecakapan hidup.";
+    "MH SCOUT adalah wadah pembinaan kepramukaan yang bertekad membentuk generasi muda Indonesia yang beriman, bertakwa, berakhlak mulia, berjiwa patriotik, taat hukum, disiplin, menjunjung tinggi nilai-nilai luhur bangsa, serta memiliki kecakapan hidup.";
   const history =
     profile?.history ||
     "Gugus Depan ini didirikan dengan tekad untuk menyelenggarakan pendidikan kepramukaan berkualitas. Selama bertahun-tahun, pangkalan ini aktif menyelenggarakan latihan rutin mingguan, perkemahan, kegiatan bakti kemasyarakatan, serta mengantarkan para anggotanya meraih tingkatan Pramuka Garuda.";
@@ -158,7 +158,7 @@ export default async function ProfilPage() {
             <Mail className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-slate-900">Email Resmi</p>
-              <p className="text-xs mt-1">{profile?.email || "sekretariat@pramukaone.id"}</p>
+              <p className="text-xs mt-1">{profile?.email || "sekretariat@mhscout.id"}</p>
             </div>
           </div>
         </div>

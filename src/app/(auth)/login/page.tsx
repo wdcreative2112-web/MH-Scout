@@ -63,7 +63,7 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-2xl bg-scout-800 text-white flex items-center justify-center mx-auto mb-3 shadow-md shadow-scout-950/50">
             <Compass className="w-7 h-7 text-amber-300" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight">Portal Petugas PramukaOne</h1>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight">Portal Petugas MH SCOUT</h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
             Masuk untuk mengakses dashboard administrasi, absensi, dan keuangan
           </p>
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@pramukaone.id"
+                  placeholder="admin@mhscout.id"
                   className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-scout-600 focus:border-transparent transition-all"
                 />
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -140,21 +140,21 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setDemoAccount("admin@pramukaone.id", "AdminPramuka123!")}
+                onClick={() => setDemoAccount("admin@mhscout.id", "AdminPramuka123!")}
                 className="px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-[11px] font-semibold text-slate-700 transition-colors"
               >
                 Admin
               </button>
               <button
                 type="button"
-                onClick={() => setDemoAccount("sekretaris@pramukaone.id", "Sekretaris123!")}
+                onClick={() => setDemoAccount("sekretaris@mhscout.id", "Sekretaris123!")}
                 className="px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-[11px] font-semibold text-slate-700 transition-colors"
               >
                 Sekretaris
               </button>
               <button
                 type="button"
-                onClick={() => setDemoAccount("bendahara@pramukaone.id", "Bendahara123!")}
+                onClick={() => setDemoAccount("bendahara@mhscout.id", "Bendahara123!")}
                 className="px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-[11px] font-semibold text-slate-700 transition-colors"
               >
                 Bendahara

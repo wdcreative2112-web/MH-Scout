@@ -79,3 +79,83 @@ export async function updateMemberSkillProgressAction(data: {
     return { success: false, error: "Gagal memperbarui progres SKU/SKK." };
   }
 }
+
+export async function updateSkillRequirementAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  const existing = await prisma.skillRequirement.findUnique({ where: { id } });
+  if (!existing) {
+    return { success: false, error: "Butir syarat tidak ditemukan." };
+  }
+
+  const type = formData.get("type") as "SKU" | "SKK";
+  const golongan = formData.get("golongan") as string;
+  const level = (formData.get("level") as string) || null;
+  const number = parseInt(formData.get("number") as string, 10);
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+
+  try {
+    const updated = await prisma.skillRequirement.update({
+      where: { id },
+      data: {
+        type: type || existing.type,
+        golongan: golongan || existing.golongan,
+        level,
+        number: isNaN(number) ? existing.number : number,
+        title: title || existing.title,
+        description: description || existing.description,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "UBAH_SYARAT_SKU",
+        module: "KECAKAPAN",
+        details: `Memperbarui syarat ${updated.type} #${updated.number}: ${updated.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/skills");
+    return { success: true, data: updated };
+  } catch {
+    return { success: false, error: "Gagal memperbarui butir syarat kecakapan." };
+  }
+}
+
+export async function deleteSkillRequirementAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const existing = await prisma.skillRequirement.findUnique({ where: { id } });
+    if (!existing) {
+      return { success: false, error: "Butir syarat tidak ditemukan." };
+    }
+
+    await prisma.skillRequirement.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_SYARAT_SKU",
+        module: "KECAKAPAN",
+        details: `Menghapus syarat ${existing.type} #${existing.number}: ${existing.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/skills");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal menghapus butir syarat kecakapan." };
+  }
+}
+

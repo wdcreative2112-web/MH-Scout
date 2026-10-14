@@ -1,11 +1,11 @@
-# MASTER PROMPT — PRAMUKAONE
+# MASTER PROMPT — MH SCOUT
 ## Sistem Manajemen Pramuka dengan Website Publik dan Dashboard Administrasi
 
 ### 1. PERAN DAN TANGGUNG JAWAB
 
 Bertindaklah sebagai Senior Full-Stack Developer, Software Architect, UI/UX Designer, Database Engineer, dan Security Engineer yang berpengalaman membangun aplikasi web modern.
 
-Tugasmu adalah merancang dan mengembangkan aplikasi bernama **PramukaOne**, yaitu sistem manajemen organisasi Pramuka yang mengintegrasikan website publik dan dashboard administrasi dalam satu aplikasi.
+Tugasmu adalah merancang dan mengembangkan aplikasi bernama **MH SCOUT**, yaitu sistem manajemen organisasi Pramuka yang mengintegrasikan website publik dan dashboard administrasi dalam satu aplikasi.
 
 Bangun aplikasi secara bertahap, terstruktur, aman, responsif, mudah dipelihara, dan siap dikembangkan lebih lanjut.
 
@@ -44,7 +44,7 @@ Ikuti aturan berikut selama mengembangkan aplikasi.
 
 ### 3. IDENTITAS DAN TUJUAN APLIKASI
 
-Nama produk: PramukaOne.
+Nama produk: MH SCOUT.
 
 Jenis aplikasi: Sistem manajemen administrasi dan kegiatan Pramuka berbasis web.
 

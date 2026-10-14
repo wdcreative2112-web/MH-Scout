@@ -76,7 +76,7 @@ export default async function HomePage() {
   }
 
   // Fallback defaults if no data yet in DB
-  const orgName = profile?.name || "Gugus Depan PramukaOne";
+  const orgName = profile?.name || "Gugus Depan MH SCOUT";
   const orgPangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";
   const orgDesc =
     profile?.description ||

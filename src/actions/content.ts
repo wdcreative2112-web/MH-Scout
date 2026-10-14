@@ -156,3 +156,213 @@ export async function updateArticleStatusAction(id: string, status: "DRAF" | "TE
     return { success: false, error: "Gagal memperbarui status artikel." };
   }
 }
+
+export async function updateNewsAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  const existing = await prisma.news.findUnique({ where: { id } });
+  if (!existing) {
+    return { success: false, error: "Berita tidak ditemukan." };
+  }
+
+  const title = formData.get("title") as string;
+  const summary = formData.get("summary") as string;
+  const content = formData.get("content") as string;
+  const status = (formData.get("status") as any) || existing.status;
+  const categoryId = (formData.get("categoryId") as string) || null;
+
+  let coverImage = existing.coverImage;
+  const file = formData.get("coverImage") as File | null;
+  if (file && file.size > 0) {
+    try {
+      const res = await uploadImage(file);
+      coverImage = res.url;
+    } catch {}
+  }
+
+  let slug = existing.slug;
+  if (title && title !== existing.title) {
+    slug = slugify(title);
+    const slugExists = await prisma.news.findFirst({
+      where: { slug, id: { not: id } },
+    });
+    if (slugExists) {
+      slug = `${slug}-${Date.now()}`;
+    }
+  }
+
+  try {
+    const updated = await prisma.news.update({
+      where: { id },
+      data: {
+        title: title || existing.title,
+        slug,
+        summary: summary || existing.summary,
+        content: content || existing.content,
+        coverImage,
+        status,
+        publishedAt: status === "TERBIT" && !existing.publishedAt ? new Date() : existing.publishedAt,
+        categoryId,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "UBAH_BERITA",
+        module: "KONTEN",
+        details: `Memperbarui warta berita: ${updated.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/news");
+    revalidatePath("/berita");
+    revalidatePath(`/berita/${updated.slug}`);
+    revalidatePath("/");
+    return { success: true, data: updated };
+  } catch (err: any) {
+    return { success: false, error: "Gagal memperbarui berita." };
+  }
+}
+
+export async function deleteNewsAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const existing = await prisma.news.findUnique({ where: { id } });
+    if (!existing) {
+      return { success: false, error: "Berita tidak ditemukan." };
+    }
+
+    await prisma.news.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_BERITA",
+        module: "KONTEN",
+        details: `Menghapus warta berita: ${existing.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/news");
+    revalidatePath("/berita");
+    revalidatePath("/");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal menghapus berita." };
+  }
+}
+
+export async function updateArticleAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  const existing = await prisma.article.findUnique({ where: { id } });
+  if (!existing) {
+    return { success: false, error: "Artikel tidak ditemukan." };
+  }
+
+  const title = formData.get("title") as string;
+  const summary = formData.get("summary") as string;
+  const content = formData.get("content") as string;
+  const status = (formData.get("status") as any) || existing.status;
+  const categoryId = (formData.get("categoryId") as string) || null;
+
+  let coverImage = existing.coverImage;
+  const file = formData.get("coverImage") as File | null;
+  if (file && file.size > 0) {
+    try {
+      const res = await uploadImage(file);
+      coverImage = res.url;
+    } catch {}
+  }
+
+  let slug = existing.slug;
+  if (title && title !== existing.title) {
+    slug = slugify(title);
+    const slugExists = await prisma.article.findFirst({
+      where: { slug, id: { not: id } },
+    });
+    if (slugExists) {
+      slug = `${slug}-${Date.now()}`;
+    }
+  }
+
+  try {
+    const updated = await prisma.article.update({
+      where: { id },
+      data: {
+        title: title || existing.title,
+        slug,
+        summary: summary || existing.summary,
+        content: content || existing.content,
+        coverImage,
+        status,
+        publishedAt: status === "TERBIT" && !existing.publishedAt ? new Date() : existing.publishedAt,
+        categoryId,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "UBAH_ARTIKEL",
+        module: "KONTEN",
+        details: `Memperbarui artikel materi: ${updated.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/articles");
+    revalidatePath("/artikel");
+    revalidatePath(`/artikel/${updated.slug}`);
+    revalidatePath("/");
+    return { success: true, data: updated };
+  } catch {
+    return { success: false, error: "Gagal memperbarui artikel." };
+  }
+}
+
+export async function deleteArticleAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const existing = await prisma.article.findUnique({ where: { id } });
+    if (!existing) {
+      return { success: false, error: "Artikel tidak ditemukan." };
+    }
+
+    await prisma.article.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_ARTIKEL",
+        module: "KONTEN",
+        details: `Menghapus artikel materi: ${existing.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/articles");
+    revalidatePath("/artikel");
+    revalidatePath("/");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal menghapus artikel." };
+  }
+}

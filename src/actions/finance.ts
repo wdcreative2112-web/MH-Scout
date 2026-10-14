@@ -142,3 +142,114 @@ export async function voidTransactionAction(id: string) {
     return { success: false, error: "Gagal membatalkan transaksi." };
   }
 }
+
+export async function updateCategoryAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  const raw = {
+    name: formData.get("name") as string,
+    type: formData.get("type") as "PEMASUKAN" | "PENGELUARAN",
+    description: (formData.get("description") as string) || null,
+  };
+
+  const parsed = financeCategorySchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  try {
+    const cat = await prisma.financeCategory.update({
+      where: { id },
+      data: {
+        name: parsed.data.name,
+        type: parsed.data.type,
+        description: parsed.data.description,
+      },
+    });
+
+    revalidatePath("/dashboard/finance");
+    return { success: true, data: cat };
+  } catch {
+    return { success: false, error: "Gagal memperbarui kategori transaksi." };
+  }
+}
+
+export async function deleteCategoryAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const txCount = await prisma.financialTransaction.count({
+      where: { categoryId: id },
+    });
+
+    if (txCount > 0) {
+      return {
+        success: false,
+        error: `Kategori ini telah digunakan dalam ${txCount} catatan transaksi kas dan tidak dapat dihapus demi audit pembukuan.`,
+      };
+    }
+
+    await prisma.financeCategory.delete({
+      where: { id },
+    });
+
+    revalidatePath("/dashboard/finance");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Gagal menghapus kategori transaksi." };
+  }
+}
+
+export async function deleteTransactionAction(id: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
+    return { success: false, error: "Akses ditolak." };
+  }
+
+  try {
+    const tx = await prisma.financialTransaction.findUnique({
+      where: { id },
+    });
+
+    if (!tx) {
+      return { success: false, error: "Transaksi tidak ditemukan." };
+    }
+
+    // Only allow hard-deleting transactions that have been voided (BATAL)
+    if (tx.status !== "BATAL") {
+      return {
+        success: false,
+        error: "Transaksi aktif harus dibatalkan (Void) terlebih dahulu sebelum dapat dihapus permanen.",
+      };
+    }
+
+    await prisma.financialTransaction.delete({
+      where: { id },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "HAPUS_TRANSAKSI",
+        module: "KEUANGAN",
+        details: `Menghapus permanen transaksi ${tx.type} Rp ${tx.amount}: ${tx.title}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/bendahara");
+    revalidatePath("/dashboard/admin");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Delete transaction error:", err);
+    return { success: false, error: "Gagal menghapus transaksi dari database." };
+  }
+}
+

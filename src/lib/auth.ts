@@ -3,9 +3,10 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { UserSession, Role } from "@/types";
 
-const COOKIE_NAME = "pramukaone_session";
+const COOKIE_NAME = "mhscout_session";
+const LEGACY_COOKIE_NAME = "pramukaone_session";
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET || "pramukaone-super-secret-default-key-min-32-chars-long!"
+  process.env.AUTH_SECRET || "mhscout-super-secret-default-key-min-32-chars-long!"
 );
 
 export async function hashPassword(password: string): Promise<string> {
@@ -50,7 +51,7 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
 export async function getSession(): Promise<UserSession | null> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get(COOKIE_NAME)?.value;
+    const token = cookieStore.get(COOKIE_NAME)?.value || cookieStore.get(LEGACY_COOKIE_NAME)?.value;
     if (!token) return null;
     return await verifySessionToken(token);
   } catch {
@@ -67,9 +68,13 @@ export async function setSessionCookie(token: string): Promise<void> {
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
+  if (cookieStore.get(LEGACY_COOKIE_NAME)) {
+    cookieStore.delete(LEGACY_COOKIE_NAME);
+  }
 }
 
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(LEGACY_COOKIE_NAME);
 }

@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: RoutineScheduleConfig = {
   startTime: "14:00",
   endTime: "16:30",
   location: "Lapangan Utama Pangkalan",
-  titleTemplate: "Latihan Rutin Minggu ke-{n}",
+  titleTemplate: "Latihan Rutin",
   isActive: true,
 };
 
