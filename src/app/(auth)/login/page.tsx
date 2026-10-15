@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginAction } from "@/actions/auth";
-import { Compass, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
+import { Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,8 +60,13 @@ export default function LoginPage() {
       <div className="max-w-md w-full mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
         {/* Header Header */}
         <div className="bg-gradient-to-r from-scout-950 via-scout-900 to-scout-800 p-6 sm:p-8 text-white text-center">
-          <div className="w-12 h-12 rounded-2xl bg-scout-800 text-white flex items-center justify-center mx-auto mb-3 shadow-md shadow-scout-950/50">
-            <Compass className="w-7 h-7 text-amber-300" />
+          {/* Official Logo */}
+          <div className="w-16 h-16 rounded-2xl bg-white p-1 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-black/30 border border-white/20 overflow-hidden">
+            <img
+              src="/logo.jpeg"
+              alt="Logo Resmi Gerakan Pramuka Maslahatul Hidayah"
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight">Portal Petugas MH SCOUT</h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">

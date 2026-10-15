@@ -45,6 +45,7 @@ model User {
   attendanceAudits AttendanceAuditLog[]
   news           News[]
   articles       Article[]
+  verifiedDonations Donation[]
 
   @@index([email])
   @@index([role])
@@ -477,4 +478,72 @@ model MediaAsset {
   createdAt    DateTime @default(now())
 
   @@index([provider])
+}
+
+model DonationCampaign {
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  category        String     @default("Umum") // "Sarana & Prasarana", "Sosial & Bencana", "Beasiswa & Pembinaan", "Kegiatan & Kemah"
+  description     String     @db.Text
+  targetAmount    Decimal    @db.Decimal(12, 2)
+  collectedAmount Decimal    @default(0) @db.Decimal(12, 2)
+  donorCount      Int        @default(0)
+  startDate       DateTime   @default(now())
+  endDate         DateTime?
+  coverImage      String?
+  status          String     @default("ACTIVE") // "ACTIVE", "COMPLETED", "PAUSED"
+  isFeatured      Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  donations       Donation[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([category])
+}
+
+model Donation {
+  id              String            @id @default(cuid())
+  donationNumber  String            @unique // e.g. "DON-20261015-001"
+  campaignId      String?
+  donorName       String
+  isAnonymous     Boolean           @default(false)
+  donorEmail      String?
+  donorPhone      String?
+  amount          Decimal           @db.Decimal(12, 2)
+  paymentMethod   String            // "TRANSFER_BANK", "QRIS", "TUNAI"
+  bankName        String?           // e.g. "BSI", "BCA", "Mandiri", "QRIS"
+  proofUrl        String?
+  status          String            @default("PENDING") // "PENDING", "VERIFIED", "REJECTED"
+  message         String?           @db.Text
+  verifiedAt      DateTime?
+  verifiedById    String?
+  rejectionReason String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  campaign        DonationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  verifiedBy      User?             @relation(fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([donationNumber])
+  @@index([campaignId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DonationAccount {
+  id            String   @id @default(cuid())
+  bankName      String   // "Bank Syariah Indonesia (BSI)", "Bank BCA", "QRIS Pangkalan"
+  accountNumber String   // "7212345678"
+  accountHolder String   // "PRAMUKA MH SCOUT"
+  qrImageUrl    String?
+  description   String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
 }

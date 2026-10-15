@@ -32,6 +32,13 @@ export function DashboardHeader({ session }: HeaderProps) {
               Sistem Manajemen Pramuka
             </span>
             <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-white border border-slate-200 shadow-2xs overflow-hidden shrink-0 flex items-center justify-center">
+                <img
+                  src="/logo.jpeg"
+                  alt="Logo MH SCOUT"
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <span className="text-sm sm:text-base font-bold text-slate-900 truncate">
                 Gugus Depan MH SCOUT
               </span>

@@ -38,7 +38,12 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', 'var(--font-poppins)', 'system-ui', 'sans-serif'],
+        poppins: ['Poppins', 'var(--font-poppins)', 'sans-serif'],
+      },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       },
     },
   },
