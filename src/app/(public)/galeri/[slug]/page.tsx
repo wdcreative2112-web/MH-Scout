@@ -7,6 +7,8 @@ import { Calendar, ArrowLeft, Image as ImageIcon, Camera } from "lucide-react";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import type { Metadata } from "next";
 
+import { getAbsoluteImageUrl, getAbsoluteUrl } from "@/lib/share";
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -18,9 +20,38 @@ export async function generateMetadata({
   try {
     const album = await prisma.galleryAlbum.findUnique({ where: { slug } });
     if (!album || !album.isPublished) return { title: "Album Tidak Ditemukan — MH SCOUT" };
+
+    const canonicalUrl = getAbsoluteUrl(`/galeri/${album.slug}`);
+    const resolvedImageUrl = getAbsoluteImageUrl(album.coverImage);
+
     return {
       title: `${album.title} — Galeri MH SCOUT`,
       description: album.description || "Dokumentasi kegiatan Pramuka",
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        type: "website",
+        locale: "id_ID",
+        url: canonicalUrl,
+        siteName: "MH SCOUT — Pangkalan Gerakan Pramuka",
+        title: album.title,
+        description: album.description || "Dokumentasi kegiatan Pramuka",
+        images: [
+          {
+            url: resolvedImageUrl,
+            width: 1200,
+            height: 630,
+            alt: album.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: album.title,
+        description: album.description || "Dokumentasi kegiatan Pramuka",
+        images: [resolvedImageUrl],
+      },
     };
   } catch {
     return { title: "Galeri Foto — MH SCOUT" };

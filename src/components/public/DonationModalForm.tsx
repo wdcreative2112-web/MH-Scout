@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import {
   Heart,
   X,
   CreditCard,
   QrCode,
   Upload,
+  Download,
   CheckCircle2,
   Sparkles,
   ArrowRight,
@@ -68,6 +69,17 @@ export function DonationModalForm({
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [successResult, setSuccessResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -153,28 +165,33 @@ export function DonationModalForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-6">
-        {/* Header Modal */}
-        <div className="relative bg-gradient-to-r from-scout-950 via-scout-900 to-emerald-950 text-white p-5 sm:p-7">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-start justify-center p-0 sm:p-4 md:p-6 animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl bg-white sm:rounded-3xl shadow-2xl border-x sm:border border-slate-100 my-0 sm:my-8 overflow-hidden flex flex-col min-h-screen sm:min-h-0">
+        {/* Header Modal - STICKY TOP */}
+        <div className="sticky top-0 z-30 bg-gradient-to-r from-scout-950 via-scout-900 to-emerald-950 text-white px-4 py-3 sm:px-6 sm:py-4 shadow-md border-b border-emerald-500/20">
           <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent pointer-events-none" />
-          <button
-            type="button"
-            onClick={resetForm}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/30 text-emerald-300 text-xs font-semibold w-fit mb-2 shadow-xs">
-            <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-            <span>Infak & Donasi Kepramukaan</span>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] sm:text-[11px] font-bold">
+                <Heart className="w-3 h-3 fill-rose-400 text-rose-400 shrink-0" />
+                <span>Infak & Donasi Kepramukaan</span>
+              </div>
+              <h2 className="text-base sm:text-xl font-black tracking-tight text-white leading-tight mt-0.5 truncate">
+                Formulir Donasi & Konfirmasi
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={resetForm}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-slate-200 hover:text-white transition-all shrink-0 cursor-pointer"
+              title="Tutup Formulir"
+              aria-label="Tutup Formulir"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            Formulir Donasi & Konfirmasi
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-lg leading-relaxed">
-            Dukung pendidikan karakter, sarana prasarana perkemahan, dan beasiswa adik-adik Pramuka MH SCOUT.
-          </p>
         </div>
 
         {/* Modal Body */}
@@ -234,7 +251,7 @@ export function DonationModalForm({
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
             {errorMessage && (
               <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
                 <span>⚠️ {errorMessage}</span>
@@ -242,7 +259,7 @@ export function DonationModalForm({
             )}
 
             {/* 1. Pilih Program / Kampanye */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 1. Alokasi Program Donasi
               </label>
@@ -261,11 +278,11 @@ export function DonationModalForm({
             </div>
 
             {/* 2. Pilih Nominal Donasi */}
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 2. Pilih Nominal Donasi
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {PRESET_AMOUNTS.map((amt) => {
                   const isChosen = !isCustom && selectedAmount === amt;
                   return (
@@ -273,7 +290,7 @@ export function DonationModalForm({
                       key={amt}
                       type="button"
                       onClick={() => handleAmountPreset(amt)}
-                      className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all border ${
+                      className={`py-2 px-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all border text-center ${
                         isChosen
                           ? "bg-emerald-800 text-white border-emerald-800 shadow-xs scale-[1.02]"
                           : "bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50"
@@ -326,7 +343,15 @@ export function DonationModalForm({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("QRIS")}
+                  onClick={() => {
+                    setPaymentMethod("QRIS");
+                    const qrisAcc =
+                      accounts.find((a) => a.bankName.toLowerCase().includes("qris") && a.qrImageUrl) ||
+                      accounts.find((a) => a.qrImageUrl);
+                    if (qrisAcc) {
+                      setSelectedAccountId(qrisAcc.id);
+                    }
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
                     paymentMethod === "QRIS"
                       ? "bg-emerald-900 text-white border-emerald-900 shadow-xs"
@@ -341,60 +366,107 @@ export function DonationModalForm({
               {/* Account Selector Card */}
               {accounts.length > 0 && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-200/80 space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600">
-                      Pilih Rekening Tujuan:
-                    </label>
-                    <select
-                      value={selectedAccountId}
-                      onChange={(e) => setSelectedAccountId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs font-semibold bg-white text-slate-800"
-                    >
-                      {accounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.bankName} - {acc.accountHolder}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Mode QRIS: Tidak perlu nomor rekening, cukup gambar QRIS & tombol unduh */}
+                  {paymentMethod === "QRIS" ? (
+                    currentAccount?.qrImageUrl ? (
+                      <div className="pt-1 text-center animate-in fade-in space-y-3">
+                        <div className="inline-block p-3 bg-white rounded-2xl border border-emerald-300 shadow-xs">
+                          <img
+                            src={currentAccount.qrImageUrl}
+                            alt={currentAccount.bankName}
+                            className="w-52 h-52 object-contain mx-auto"
+                          />
+                        </div>
 
-                  {currentAccount && (
-                    <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                          Nomor Rekening / ID:
+                        <div className="space-y-2">
+                          <p className="text-xs text-slate-700">
+                            Penerima: <strong className="text-slate-900">{currentAccount.accountHolder}</strong>
+                          </p>
+
+                          <div>
+                            <a
+                              href={currentAccount.qrImageUrl}
+                              download="QRIS-PRAMUKA-MH-SCOUT.png"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 shadow-2xs hover:shadow-xs transition-all active:scale-95"
+                            >
+                              <Download className="w-4 h-4 text-emerald-700" />
+                              <span>Unduh Barcode QRIS</span>
+                            </a>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 max-w-sm mx-auto leading-relaxed">
+                            Scan langsung atau unduh gambar QRIS di atas untuk membayar melalui aplikasi m-banking atau e-wallet (BCA, Mandiri, BRI, BSI, GoPay, OVO, DANA, ShopeePay).
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2 text-center p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                        <p className="text-xs font-bold text-amber-800">
+                          Barcode QRIS belum terpasang.
                         </p>
-                        <p className="font-mono text-base font-black text-emerald-950">
-                          {currentAccount.accountNumber}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          a.n. <strong>{currentAccount.accountHolder}</strong>
-                        </p>
+                        {accounts.find((a) => a.qrImageUrl) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const accWithQr =
+                                accounts.find((a) => a.bankName.toLowerCase().includes("qris") && a.qrImageUrl) ||
+                                accounts.find((a) => a.qrImageUrl);
+                              if (accWithQr) setSelectedAccountId(accWithQr.id);
+                            }}
+                            className="mt-1.5 text-xs font-bold text-emerald-800 underline hover:text-emerald-900 inline-block"
+                          >
+                            Beralih ke QRIS aktif →
+                          </button>
+                        )}
+                      </div>
+                    )
+                  ) : (
+                    /* Mode Transfer Bank: Pilihan Rekening Bank + Nomor Rekening + Tombol Salin */
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-slate-600">
+                          Pilih Rekening Bank Tujuan:
+                        </label>
+                        <select
+                          value={selectedAccountId}
+                          onChange={(e) => setSelectedAccountId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs font-semibold bg-white text-slate-800"
+                        >
+                          {accounts
+                            .filter((acc) => !acc.bankName.toLowerCase().includes("qris"))
+                            .map((acc) => (
+                              <option key={acc.id} value={acc.id}>
+                                {acc.bankName} - {acc.accountHolder}
+                              </option>
+                            ))}
+                        </select>
                       </div>
 
-                      <div className="shrink-0">
-                        <CopyButton
-                          textToCopy={currentAccount.accountNumber}
-                          label="Salin Rekening"
-                        />
-                      </div>
-                    </div>
-                  )}
+                      {currentAccount && (
+                        <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                              Nomor Rekening:
+                            </p>
+                            <p className="font-mono text-base font-black text-emerald-950">
+                              {currentAccount.accountNumber}
+                            </p>
+                            <p className="text-xs text-slate-600">
+                              a.n. <strong>{currentAccount.accountHolder}</strong>
+                            </p>
+                          </div>
 
-                  {/* QRIS Image View if QRIS Selected */}
-                  {paymentMethod === "QRIS" && currentAccount?.qrImageUrl && (
-                    <div className="pt-2 text-center">
-                      <div className="inline-block p-2 bg-white rounded-2xl border border-slate-200 shadow-xs">
-                        <img
-                          src={currentAccount.qrImageUrl}
-                          alt="QRIS Donasi"
-                          className="w-44 h-44 object-contain mx-auto"
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1.5">
-                        Scan QRIS dengan aplikasi mobile banking atau e-wallet apa saja.
-                      </p>
-                    </div>
+                          <div className="shrink-0">
+                            <CopyButton
+                              textToCopy={currentAccount.accountNumber}
+                              label="Salin Rekening"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

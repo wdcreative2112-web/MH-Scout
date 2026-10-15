@@ -144,3 +144,181 @@ export async function deleteLetterAction(id: string) {
   }
 }
 
+export async function createPermitLetterAction(formData: FormData) {
+  const session = await requireAuth();
+
+  const letterNumber = (formData.get("letterNumber") as string)?.trim();
+  const dateStr = (formData.get("date") as string) || new Date().toISOString();
+  const memberName = (formData.get("memberName") as string)?.trim();
+  const memberNumber = (formData.get("memberNumber") as string)?.trim() || "-";
+  const groupName = (formData.get("groupName") as string)?.trim() || "-";
+  const scoutLevel = (formData.get("scoutLevel") as string)?.trim() || "Penggalang";
+  const classGrade = (formData.get("classGrade") as string)?.trim() || "";
+  const activityTitle = (formData.get("activityTitle") as string)?.trim() || "Kegiatan Pramuka";
+  const permitType = (formData.get("permitType") as string) === "SAKIT" ? "SAKIT" : "IZIN";
+  const startDate = (formData.get("startDate") as string) || dateStr.split("T")[0];
+  const endDate = (formData.get("endDate") as string) || startDate;
+  const reason = (formData.get("reason") as string)?.trim() || "Berhalangan hadir";
+  const parentName = (formData.get("parentName") as string)?.trim() || "Orang Tua / Wali";
+  const parentPhone = (formData.get("parentPhone") as string)?.trim() || "";
+  const leaderName = (formData.get("leaderName") as string)?.trim() || "Pembina Satuan";
+  const leaderNip = (formData.get("leaderNip") as string)?.trim() || "-";
+  const createdPlace = (formData.get("createdPlace") as string)?.trim() || "Jakarta";
+  const memberId = (formData.get("memberId") as string) || "";
+  const activityId = (formData.get("activityId") as string) || "";
+
+  if (!letterNumber) {
+    return { success: false, error: "Nomor surat permohonan izin wajib diisi." };
+  }
+  if (!memberName) {
+    return { success: false, error: "Nama anggota wajib diisi atau dipilih." };
+  }
+  if (!reason) {
+    return { success: false, error: "Alasan atau keterangan izin wajib diisi." };
+  }
+
+  const structuredNotes = JSON.stringify({
+    isPermitLetter: true,
+    permitType,
+    memberId,
+    memberName,
+    memberNumber,
+    groupName,
+    scoutLevel,
+    classGrade,
+    activityId,
+    activityTitle,
+    startDate,
+    endDate,
+    reason,
+    parentName,
+    parentPhone,
+    leaderName,
+    leaderNip,
+    createdPlace,
+  });
+
+  const subject = `Surat Izin ${permitType === "SAKIT" ? "Sakit" : "Izin"} - ${memberName} (${activityTitle})`;
+  const summary = `Permohonan izin ${permitType === "SAKIT" ? "sakit" : "tidak hadir"} untuk anggota ${memberName} (${memberNumber}, Regu ${groupName}) pada kegiatan ${activityTitle} (${startDate} s.d. ${endDate}). Alasan: ${reason}`;
+
+  try {
+    const letter = await prisma.letter.create({
+      data: {
+        letterNumber,
+        type: "KELUAR",
+        date: new Date(dateStr),
+        subject,
+        sender: `Orang Tua / Wali (${parentName})`,
+        recipient: `Pembina Gugus Depan (${leaderName})`,
+        summary,
+        status: "DIKIRIM",
+        notes: structuredNotes,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "BUAT_SURAT_IZIN",
+        module: "SURAT",
+        details: `Membuat surat izin ${permitType}: ${letter.letterNumber} untuk ${memberName}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/letters");
+    return { success: true, data: letter };
+  } catch (err: any) {
+    console.error("Create permit letter error:", err);
+    return { success: false, error: "Gagal menyimpan surat izin anggota." };
+  }
+}
+
+export async function updatePermitLetterAction(id: string, formData: FormData) {
+  const session = await requireAuth();
+
+  const letterNumber = (formData.get("letterNumber") as string)?.trim();
+  const dateStr = (formData.get("date") as string) || new Date().toISOString();
+  const memberName = (formData.get("memberName") as string)?.trim();
+  const memberNumber = (formData.get("memberNumber") as string)?.trim() || "-";
+  const groupName = (formData.get("groupName") as string)?.trim() || "-";
+  const scoutLevel = (formData.get("scoutLevel") as string)?.trim() || "Penggalang";
+  const classGrade = (formData.get("classGrade") as string)?.trim() || "";
+  const activityTitle = (formData.get("activityTitle") as string)?.trim() || "Kegiatan Pramuka";
+  const permitType = (formData.get("permitType") as string) === "SAKIT" ? "SAKIT" : "IZIN";
+  const startDate = (formData.get("startDate") as string) || dateStr.split("T")[0];
+  const endDate = (formData.get("endDate") as string) || startDate;
+  const reason = (formData.get("reason") as string)?.trim() || "Berhalangan hadir";
+  const parentName = (formData.get("parentName") as string)?.trim() || "Orang Tua / Wali";
+  const parentPhone = (formData.get("parentPhone") as string)?.trim() || "";
+  const leaderName = (formData.get("leaderName") as string)?.trim() || "Pembina Satuan";
+  const leaderNip = (formData.get("leaderNip") as string)?.trim() || "-";
+  const createdPlace = (formData.get("createdPlace") as string)?.trim() || "Jakarta";
+  const memberId = (formData.get("memberId") as string) || "";
+  const activityId = (formData.get("activityId") as string) || "";
+
+  if (!letterNumber) {
+    return { success: false, error: "Nomor surat permohonan izin wajib diisi." };
+  }
+  if (!memberName) {
+    return { success: false, error: "Nama anggota wajib diisi atau dipilih." };
+  }
+
+  const structuredNotes = JSON.stringify({
+    isPermitLetter: true,
+    permitType,
+    memberId,
+    memberName,
+    memberNumber,
+    groupName,
+    scoutLevel,
+    classGrade,
+    activityId,
+    activityTitle,
+    startDate,
+    endDate,
+    reason,
+    parentName,
+    parentPhone,
+    leaderName,
+    leaderNip,
+    createdPlace,
+  });
+
+  const subject = `Surat Izin ${permitType === "SAKIT" ? "Sakit" : "Izin"} - ${memberName} (${activityTitle})`;
+  const summary = `Permohonan izin ${permitType === "SAKIT" ? "sakit" : "tidak hadir"} untuk anggota ${memberName} (${memberNumber}, Regu ${groupName}) pada kegiatan ${activityTitle} (${startDate} s.d. ${endDate}). Alasan: ${reason}`;
+
+  try {
+    const letter = await prisma.letter.update({
+      where: { id },
+      data: {
+        letterNumber,
+        type: "KELUAR",
+        date: new Date(dateStr),
+        subject,
+        sender: `Orang Tua / Wali (${parentName})`,
+        recipient: `Pembina Gugus Depan (${leaderName})`,
+        summary,
+        notes: structuredNotes,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "UBAH_SURAT_IZIN",
+        module: "SURAT",
+        details: `Mengubah surat izin ${permitType}: ${letter.letterNumber} untuk ${memberName}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/letters");
+    return { success: true, data: letter };
+  } catch (err: any) {
+    console.error("Update permit letter error:", err);
+    return { success: false, error: "Gagal memperbarui surat izin anggota." };
+  }
+}
+
+

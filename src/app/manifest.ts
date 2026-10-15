@@ -1,0 +1,29 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "MH SCOUT — Portal & Manajemen Pramuka",
+    short_name: "MH SCOUT",
+    description: "Sistem Informasi & Manajemen Administrasi Gerakan Pramuka Pangkalan Gugus Depan Maslahatul Hidayah",
+    start_url: "/login",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#071912",
+    theme_color: "#184231",
+    icons: [
+      {
+        src: "/logo.jpeg",
+        sizes: "192x192",
+        type: "image/jpeg",
+        purpose: "any",
+      },
+      {
+        src: "/logo.jpeg",
+        sizes: "512x512",
+        type: "image/jpeg",
+        purpose: "maskable",
+      },
+    ],
+  };
+}

@@ -19,6 +19,7 @@ import {
   Flame,
   HelpCircle,
   Building,
+  Download,
 } from "lucide-react";
 import { DonationCampaign, Donation, DonationAccount } from "@/types";
 import { formatRupiah, formatDate } from "@/lib/utils";
@@ -50,7 +51,7 @@ export function DonationClientView({
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
     null
   );
-  const [qrisZoomOpen, setQrisZoomOpen] = useState(false);
+  const [zoomQrAccount, setZoomQrAccount] = useState<DonationAccount | null>(null);
 
   const categories = [
     { id: "ALL", label: "Semua Program" },
@@ -74,7 +75,9 @@ export function DonationClientView({
     setIsModalOpen(true);
   };
 
-  const qrisAccount = accounts.find((a) => a.qrImageUrl);
+  const qrisAccount =
+    accounts.find((a) => a.bankName.toLowerCase().includes("qris") && a.qrImageUrl) ||
+    accounts.find((a) => a.qrImageUrl);
 
   return (
     <div className="space-y-12 sm:space-y-16 pb-16">
@@ -240,42 +243,93 @@ export function DonationClientView({
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
               {/* Bank Accounts Grid */}
-              <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {accounts.map((acc) => (
-                  <div
-                    key={acc.id}
-                    className="p-5 rounded-2xl bg-white/90 border border-slate-200/80 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all space-y-3 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                        <Building className="w-4 h-4 text-emerald-700" />
-                        <span>{acc.bankName}</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        Aktif
-                      </span>
-                    </div>
+              <div
+                className={`${
+                  qrisAccount?.qrImageUrl ? "md:col-span-8" : "md:col-span-12"
+                } grid grid-cols-1 sm:grid-cols-2 gap-4`}
+              >
+                {accounts.map((acc) => {
+                  const isQris =
+                    acc.bankName.toLowerCase().includes("qris") ||
+                    acc.accountNumber === "QRIS";
 
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                        Nomor Rekening
-                      </p>
-                      <p className="font-mono text-base sm:text-lg font-black text-emerald-950 tracking-wider">
-                        {acc.accountNumber}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-0.5">
-                        a.n. <strong>{acc.accountHolder}</strong>
-                      </p>
-                    </div>
+                  return (
+                    <div
+                      key={acc.id}
+                      className="p-5 rounded-2xl bg-white/90 border border-slate-200/80 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all space-y-3 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <Building className="w-4 h-4 text-emerald-700" />
+                          <span>{acc.bankName}</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Aktif
+                        </span>
+                      </div>
 
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <p className="text-[11px] text-slate-500 truncate max-w-[150px]">
-                        {acc.description || "Rekening donasi pangkalan"}
-                      </p>
-                      <CopyButton textToCopy={acc.accountNumber} label="Salin" />
+                      {isQris ? (
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                            Metode Pembayaran
+                          </span>
+                          <p className="text-base font-black text-emerald-950">
+                            Scan & Unduh Barcode
+                          </p>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            a.n. <strong>{acc.accountHolder}</strong>
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                            Nomor Rekening
+                          </p>
+                          <p className="font-mono text-base sm:text-lg font-black text-emerald-950 tracking-wider">
+                            {acc.accountNumber}
+                          </p>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            a.n. <strong>{acc.accountHolder}</strong>
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-slate-500 truncate max-w-[120px]">
+                          {acc.description || (isQris ? "QRIS Standar Nasional" : "Rekening donasi pangkalan")}
+                        </p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {acc.qrImageUrl ? (
+                            <>
+                              <a
+                                href={acc.qrImageUrl}
+                                download="QRIS-PRAMUKA-MH-SCOUT.png"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white glossy-button-primary transition-all shadow-2xs active:scale-95"
+                                title="Unduh Barcode QRIS"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Unduh</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setZoomQrAccount(acc)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                                title="Perbesar Barcode"
+                              >
+                                <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Lihat</span>
+                              </button>
+                            </>
+                          ) : (
+                            <CopyButton textToCopy={acc.accountNumber} label="Salin" />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* QRIS Card Feature */}
@@ -286,22 +340,35 @@ export function DonationClientView({
                     <span>Scan QRIS Langsung</span>
                   </div>
                   <div
-                    onClick={() => setQrisZoomOpen(true)}
+                    onClick={() => setZoomQrAccount(qrisAccount)}
                     className="bg-white p-3 rounded-2xl shadow-inner cursor-pointer hover:scale-102 transition-transform inline-block group"
                     title="Klik untuk memperbesar QRIS"
                   >
                     <img
                       src={qrisAccount.qrImageUrl}
-                      alt="QRIS MH SCOUT"
+                      alt={qrisAccount.bankName}
                       className="w-40 h-40 object-contain mx-auto"
                     />
                     <span className="text-[10px] text-slate-500 font-medium group-hover:text-emerald-700 block mt-1">
                       Klik untuk memperbesar
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-snug">
-                    Bisa di-scan dari aplikasi mobile banking apa saja atau e-wallet (GoPay, OVO, ShopeePay, Dana, LinkAja).
-                  </p>
+                  
+                  <div className="pt-1 flex flex-col gap-2">
+                    <a
+                      href={qrisAccount.qrImageUrl}
+                      download="QRIS-PRAMUKA-MH-SCOUT.png"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-900 bg-amber-300 hover:bg-amber-200 shadow-md transition-all active:scale-95"
+                    >
+                      <Download className="w-4 h-4 text-slate-900" />
+                      <span>Unduh Barcode QRIS</span>
+                    </a>
+                    <p className="text-xs text-slate-300 leading-snug">
+                      Bisa di-scan langsung atau diunduh untuk bayar lewat mobile banking & e-wallet.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -558,11 +625,11 @@ export function DonationClientView({
         </ScrollReveal>
       </section>
 
-      {/* QRIS Full Zoom Modal */}
-      {qrisZoomOpen && qrisAccount?.qrImageUrl && (
+      {/* QR Code Full Zoom Modal */}
+      {zoomQrAccount && zoomQrAccount.qrImageUrl && (
         <div
-          onClick={() => setQrisZoomOpen(false)}
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md p-4 flex items-center justify-center cursor-pointer animate-in fade-in"
+          onClick={() => setZoomQrAccount(null)}
+          className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md p-4 flex items-center justify-center cursor-pointer animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -570,22 +637,45 @@ export function DonationClientView({
           >
             <button
               type="button"
-              onClick={() => setQrisZoomOpen(false)}
+              onClick={() => setZoomQrAccount(null)}
               className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700"
             >
               ✕
             </button>
-            <h3 className="font-black text-slate-900 text-base">QRIS Nasional MH SCOUT</h3>
-            <img
-              src={qrisAccount.qrImageUrl}
-              alt="QRIS Full Zoom"
-              className="w-64 h-64 object-contain mx-auto border border-slate-200 rounded-xl"
-            />
-            <p className="text-xs text-slate-500 font-mono font-bold">
-              {qrisAccount.accountNumber}
-            </p>
+            <h3 className="font-black text-slate-900 text-base">
+              {zoomQrAccount.bankName}
+            </h3>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
+              <img
+                src={zoomQrAccount.qrImageUrl}
+                alt={zoomQrAccount.bankName}
+                className="w-64 h-64 object-contain mx-auto rounded-xl"
+              />
+            </div>
+            {zoomQrAccount.accountNumber &&
+              zoomQrAccount.accountNumber !== "QRIS" &&
+              !zoomQrAccount.bankName.toLowerCase().includes("qris") && (
+                <p className="text-xs text-slate-500 font-mono font-bold">
+                  {zoomQrAccount.accountNumber}
+                </p>
+              )}
             <p className="text-xs text-slate-600">
-              a.n. <strong>{qrisAccount.accountHolder}</strong>
+              a.n. <strong>{zoomQrAccount.accountHolder}</strong>
+            </p>
+            <div className="pt-1">
+              <a
+                href={zoomQrAccount.qrImageUrl}
+                download={`${zoomQrAccount.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Unduh Barcode QRIS</span>
+              </a>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Mendukung aplikasi mobile banking dan seluruh dompet digital standar QRIS Nasional.
             </p>
           </div>
         </div>

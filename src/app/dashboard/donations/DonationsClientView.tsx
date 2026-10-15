@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Heart,
   Plus,
@@ -23,6 +24,7 @@ import {
   Clock,
   Sparkles,
   Upload,
+  Download,
   ArrowRight,
   ChevronRight,
 } from "lucide-react";
@@ -63,10 +65,28 @@ export function DonationsClientView({
   accounts,
   stats,
 }: DonationsClientViewProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"donations" | "campaigns" | "accounts">("donations");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Dynamic local state with server props sync
+  const [accountsList, setAccountsList] = useState<DonationAccount[]>(accounts);
+  const [campaignsList, setCampaignsList] = useState<DonationCampaign[]>(campaigns);
+  const [donationsList, setDonationsList] = useState<Donation[]>(donations);
+
+  useEffect(() => {
+    setAccountsList(accounts);
+  }, [accounts]);
+
+  useEffect(() => {
+    setCampaignsList(campaigns);
+  }, [campaigns]);
+
+  useEffect(() => {
+    setDonationsList(donations);
+  }, [donations]);
 
   // Modals state
   const [proofModalUrl, setProofModalUrl] = useState<string | null>(null);
@@ -80,6 +100,9 @@ export function DonationsClientView({
   // Account modal
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<DonationAccount | null>(null);
+  const [accountQrPreview, setAccountQrPreview] = useState<string | null>(null);
+  const [accountQrUrlInput, setAccountQrUrlInput] = useState<string>("");
+  const [removeQrImage, setRemoveQrImage] = useState(false);
 
   // Toast / feedback message
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -90,7 +113,7 @@ export function DonationsClientView({
   };
 
   // Filter donations
-  const filteredDonations = donations.filter((d) => {
+  const filteredDonations = donationsList.filter((d) => {
     const matchStatus = statusFilter === "ALL" || d.status === statusFilter;
     const matchQuery =
       !searchQuery ||
@@ -108,6 +131,10 @@ export function DonationsClientView({
       const res = await verifyDonationAction(donationId);
       if (res.success) {
         showToast("success", res.message || "Donasi berhasil diverifikasi.");
+        setDonationsList((prev) =>
+          prev.map((d) => (d.id === donationId ? { ...d, status: "VERIFIED" } : d))
+        );
+        router.refresh();
       } else {
         showToast("error", res.error || "Gagal memverifikasi donasi.");
       }
@@ -122,8 +149,16 @@ export function DonationsClientView({
       const res = await rejectDonationAction(rejectModalData.id, rejectReason);
       if (res.success) {
         showToast("success", "Donasi telah ditolak.");
+        setDonationsList((prev) =>
+          prev.map((d) =>
+            d.id === rejectModalData.id
+              ? { ...d, status: "REJECTED", rejectionReason: rejectReason }
+              : d
+          )
+        );
         setRejectModalData(null);
         setRejectReason("");
+        router.refresh();
       } else {
         showToast("error", res.error || "Gagal menolak donasi.");
       }
@@ -137,6 +172,8 @@ export function DonationsClientView({
       const res = await deleteCampaignAction(id);
       if (res.success) {
         showToast("success", res.message || "Kampanye berhasil dihapus.");
+        setCampaignsList((prev) => prev.filter((c) => c.id !== id));
+        router.refresh();
       } else {
         showToast("error", res.error || "Gagal menghapus kampanye.");
       }
@@ -150,6 +187,8 @@ export function DonationsClientView({
       const res = await deleteAccountAction(id);
       if (res.success) {
         showToast("success", res.message || "Rekening berhasil dihapus.");
+        setAccountsList((prev) => prev.filter((a) => a.id !== id));
+        router.refresh();
       } else {
         showToast("error", res.error || "Gagal menghapus rekening.");
       }
@@ -490,7 +529,7 @@ export function DonationsClientView({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map((camp) => {
+            {campaignsList.map((camp) => {
               const percent = Math.min(
                 100,
                 Math.round((camp.collectedAmount / camp.targetAmount) * 100)
@@ -598,6 +637,9 @@ export function DonationsClientView({
               type="button"
               onClick={() => {
                 setEditingAccount(null);
+                setAccountQrPreview(null);
+                setAccountQrUrlInput("");
+                setRemoveQrImage(false);
                 setAccountModalOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
@@ -608,7 +650,7 @@ export function DonationsClientView({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {accounts.map((acc) => (
+            {accountsList.map((acc) => (
               <div
                 key={acc.id}
                 className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between space-y-4"
@@ -630,29 +672,53 @@ export function DonationsClientView({
                     </span>
                   </div>
 
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400">
-                      Nomor Rekening / NMID
-                    </p>
-                    <p className="font-mono text-base font-black text-slate-900 tracking-wider">
-                      {acc.accountNumber}
-                    </p>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      a.n. <strong>{acc.accountHolder}</strong>
-                    </p>
-                  </div>
+                  {acc.bankName.toLowerCase().includes("qris") || acc.accountNumber === "QRIS" ? (
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">
+                        Metode Pembayaran
+                      </p>
+                      <p className="font-bold text-sm text-emerald-800">
+                        QRIS (Scan & Unduh Barcode)
+                      </p>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        a.n. <strong>{acc.accountHolder}</strong>
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">
+                        Nomor Rekening
+                      </p>
+                      <p className="font-mono text-base font-black text-slate-900 tracking-wider">
+                        {acc.accountNumber}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        a.n. <strong>{acc.accountHolder}</strong>
+                      </p>
+                    </div>
+                  )}
 
                   {acc.description && (
                     <p className="text-xs text-slate-500">{acc.description}</p>
                   )}
 
                   {acc.qrImageUrl && (
-                    <div className="pt-2 text-center">
+                    <div className="pt-2 text-center space-y-2">
                       <img
                         src={acc.qrImageUrl}
                         alt="QRIS"
-                        className="w-28 h-28 object-contain mx-auto rounded-lg border border-slate-200"
+                        className="w-28 h-28 object-contain mx-auto rounded-lg border border-slate-200 bg-white"
                       />
+                      <a
+                        href={acc.qrImageUrl}
+                        download={`${acc.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                      >
+                        <Download className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Unduh Barcode</span>
+                      </a>
                     </div>
                   )}
                 </div>
@@ -662,6 +728,9 @@ export function DonationsClientView({
                     type="button"
                     onClick={() => {
                       setEditingAccount(acc);
+                      setAccountQrPreview(acc.qrImageUrl || null);
+                      setAccountQrUrlInput(acc.qrImageUrl || "");
+                      setRemoveQrImage(false);
                       setAccountModalOpen(true);
                     }}
                     className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
@@ -789,6 +858,7 @@ export function DonationsClientView({
                   if (res.success) {
                     showToast("success", res.message || "Kampanye berhasil disimpan.");
                     setCampaignModalOpen(false);
+                    router.refresh();
                   } else {
                     showToast("error", res.error || "Gagal menyimpan kampanye.");
                   }
@@ -919,15 +989,20 @@ export function DonationsClientView({
       {/* MODAL 4: TAMBAH / EDIT REKENING */}
       {accountModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl my-6">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-6">
             <div className="flex justify-between items-center">
-              <h3 className="font-black text-slate-900 text-lg">
-                {editingAccount ? "Edit Rekening / QRIS" : "Tambah Rekening Baru"}
-              </h3>
+              <div>
+                <h3 className="font-black text-slate-900 text-lg">
+                  {editingAccount ? "Edit Rekening / QRIS" : "Tambah Rekening Baru"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Rekening atau QRIS akan langsung tampil di halaman donasi publik.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setAccountModalOpen(false)}
-                className="p-2 rounded-full hover:bg-slate-100"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
               >
                 ✕
               </button>
@@ -942,7 +1017,17 @@ export function DonationsClientView({
                   const res = await saveAccountAction(formData);
                   if (res.success) {
                     showToast("success", res.message || "Rekening berhasil disimpan.");
+                    if (res.account) {
+                      setAccountsList((prev) => {
+                        const exists = prev.some((a) => a.id === res.account.id);
+                        if (exists) {
+                          return prev.map((a) => (a.id === res.account.id ? res.account : a));
+                        }
+                        return [...prev, res.account];
+                      });
+                    }
                     setAccountModalOpen(false);
+                    router.refresh();
                   } else {
                     showToast("error", res.error || "Gagal menyimpan rekening.");
                   }
@@ -960,58 +1045,54 @@ export function DonationsClientView({
                   value={editingAccount.qrImageUrl}
                 />
               )}
+              <input
+                type="hidden"
+                name="removeQrImage"
+                value={removeQrImage ? "true" : "false"}
+              />
+              <input type="hidden" name="isActiveSubmitted" value="1" />
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Bank / Saluran Pembayaran
+                  Nama Bank / Saluran Pembayaran <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="bankName"
                   required
                   defaultValue={editingAccount?.bankName || ""}
-                  placeholder="Contoh: Bank Syariah Indonesia (BSI) / QRIS"
+                  placeholder="Contoh: QRIS Nasional (Semua Bank / Dompet Digital) atau BSI"
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nomor Rekening / NMID QRIS
-                </label>
-                <input
-                  type="text"
-                  name="accountNumber"
-                  required
-                  defaultValue={editingAccount?.accountNumber || ""}
-                  placeholder="Contoh: 7198234501"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden font-mono"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nomor Rekening <span className="text-slate-400 font-normal">(Kosongkan jika QRIS)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="accountNumber"
+                    defaultValue={editingAccount?.accountNumber === "QRIS" ? "" : (editingAccount?.accountNumber || "")}
+                    placeholder="Kosongkan jika QRIS / Contoh: 7198234501"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden font-mono"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Atas Nama Rekening
-                </label>
-                <input
-                  type="text"
-                  name="accountHolder"
-                  required
-                  defaultValue={editingAccount?.accountHolder || "PRAMUKA MH SCOUT"}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Gambar Barcode QRIS (Opsional)
-                </label>
-                <input
-                  type="file"
-                  name="qrImage"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                />
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Atas Nama Rekening <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="accountHolder"
+                    required
+                    defaultValue={editingAccount?.accountHolder || "PRAMUKA MH SCOUT"}
+                    placeholder="Contoh: PRAMUKA MH SCOUT"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1022,12 +1103,108 @@ export function DonationsClientView({
                   type="text"
                   name="description"
                   defaultValue={editingAccount?.description || ""}
-                  placeholder="Contoh: Menerima transfer antar bank dan ATM Bersama"
+                  placeholder="Contoh: Menerima transfer semua e-wallet & mobile banking"
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
 
-              <div className="pt-3 flex justify-end gap-2">
+              {/* QRIS BARCODE UPLOAD & URL SECTION */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-emerald-700" />
+                    <span>Gambar Barcode QRIS</span>
+                  </label>
+                  {accountQrPreview && !removeQrImage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRemoveQrImage(true);
+                        setAccountQrPreview(null);
+                        setAccountQrUrlInput("");
+                      }}
+                      className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline"
+                    >
+                      Hapus Barcode
+                    </button>
+                  )}
+                </div>
+
+                {/* Live Preview If Available */}
+                {accountQrPreview && !removeQrImage ? (
+                  <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-emerald-200">
+                    <img
+                      src={accountQrPreview}
+                      alt="Pratinjau QRIS"
+                      className="w-20 h-20 object-contain rounded-lg border border-slate-200 shrink-0 bg-white"
+                    />
+                    <div className="space-y-1 text-xs">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        Barcode Terpasang
+                      </span>
+                      <p className="text-slate-600 text-[11px]">
+                        Gambar ini akan muncul di halaman donasi dan popup pembayaran donatur.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Upload File Input */}
+                <div>
+                  <span className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Upload Berkas Gambar (JPG, PNG, WEBP):
+                  </span>
+                  <input
+                    type="file"
+                    name="qrImage"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setAccountQrPreview(URL.createObjectURL(f));
+                        setRemoveQrImage(false);
+                      }
+                    }}
+                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                </div>
+
+                {/* Or Direct URL Input */}
+                <div>
+                  <span className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Atau Masukkan Tautan / URL Gambar QRIS:
+                  </span>
+                  <input
+                    type="text"
+                    name="qrImageUrl"
+                    value={accountQrUrlInput}
+                    onChange={(e) => {
+                      setAccountQrUrlInput(e.target.value);
+                      setAccountQrPreview(e.target.value || null);
+                      setRemoveQrImage(false);
+                    }}
+                    placeholder="https://... atau /uploads/qr.png"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Status Aktif Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="account-is-active"
+                  name="isActive"
+                  value="true"
+                  defaultChecked={editingAccount ? editingAccount.isActive : true}
+                  className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="account-is-active" className="text-xs font-bold text-slate-700 cursor-pointer">
+                  Tampilkan rekening ini sebagai opsi aktif di formulir donasi publik
+                </label>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setAccountModalOpen(false)}

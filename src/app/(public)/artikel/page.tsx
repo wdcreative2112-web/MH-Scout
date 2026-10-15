@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { BookOpen, ArrowRight, Search, Bookmark, Sparkles } from "lucide-react";
+import { ShareBar } from "@/components/public/ShareBar";
 
 export const dynamic = "force-dynamic";
 
@@ -132,13 +133,24 @@ export default async function ArtikelListPage({
                 </div>
                 <div className="px-5 sm:px-6 py-4 bg-white/50 border-t border-slate-100 flex items-center justify-between text-xs">
                   <span className="text-slate-500 font-medium">{item.authorName || "Tim Pembina"}</span>
-                  <Link
-                    href={`/artikel/${item.slug}`}
-                    className="font-bold text-emerald-800 hover:text-emerald-600 inline-flex items-center gap-1 group/btn"
-                  >
-                    <span>Baca Materi</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/artikel/${item.slug}`}
+                      className="font-bold text-emerald-800 hover:text-emerald-600 inline-flex items-center gap-1 group/btn"
+                    >
+                      <span>Baca Materi</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                    </Link>
+                    <ShareBar
+                      variant="card-icon"
+                      title={item.title}
+                      summary={item.summary}
+                      slug={item.slug}
+                      type="artikel"
+                      coverImage={item.coverImage}
+                      category={item.category?.name}
+                    />
+                  </div>
                 </div>
               </article>
             </ScrollReveal>

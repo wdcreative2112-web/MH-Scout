@@ -5,7 +5,6 @@
       "bankName": "Bank Syariah Indonesia (BSI)",
       "accountNumber": "7198234501",
       "accountHolder": "PRAMUKA GUGUS DEPAN MH SCOUT",
-      "qrImageUrl": "https://images.unsplash.com/photo-1595079672139-5470805c50bc?w=600&auto=format&fit=crop&q=80",
       "description": "Rekening operasional utama kegiatan kepanduan & infak",
       "isActive": true,
       "sortOrder": 1
@@ -31,7 +30,7 @@
     {
       "id": "acc-qris",
       "bankName": "QRIS Nasional (Semua Bank & E-Wallet)",
-      "accountNumber": "NMID: ID1020087192837",
+      "accountNumber": "QRIS",
       "accountHolder": "PRAMUKA MH SCOUT RESMI",
       "qrImageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=00020101021126590014ID.GO.PRAMUKA011893600918000000000002030000303UME51440014ID.LINKAJA.WWW02159360091800000005204581453033605802ID5916PRAMUKA+MH+SCOUT6007JAKARTA61051234062070703A016304B184",
       "description": "Scan langsung menggunakan GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",

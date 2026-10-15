@@ -1,6 +1,5 @@
 import React from "react";
-import Link from "next/link";
-import { ShieldCheck, Mail, Phone, MapPin, Heart, ArrowUpRight } from "lucide-react";
+import { ShieldCheck, Mail, Phone, MapPin, Heart } from "lucide-react";
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -14,9 +13,9 @@ export function PublicFooter() {
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-48 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-12">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-10 lg:gap-16">
           {/* Organization Brand */}
-          <div className="md:col-span-5 space-y-5">
+          <div className="max-w-md space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-white p-0.5 shadow-[0_4px_16px_rgba(0,0,0,0.4)] border border-emerald-500/30 overflow-hidden flex items-center justify-center shrink-0">
                 <img
@@ -35,7 +34,7 @@ export function PublicFooter() {
               </div>
             </div>
 
-            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-sm">
+            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
               Sistem informasi & manajemen administrasi kepramukaan terpadu. Membangun generasi muda berkarakter, mandiri, disiplin, dan berjiwa Pancasila melalui kepanduan modern.
             </p>
 
@@ -45,36 +44,8 @@ export function PublicFooter() {
             </div>
           </div>
 
-          {/* Quick Navigation */}
-          <div className="md:col-span-3 space-y-4">
-            <h3 className="text-white font-bold text-xs tracking-widest uppercase flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Navigasi Utama</span>
-            </h3>
-            <ul className="space-y-2.5 text-xs sm:text-sm">
-              {[
-                { label: "Beranda Utama", href: "/" },
-                { label: "Profil & Visi Misi", href: "/profil" },
-                { label: "Warta & Berita Kegiatan", href: "/berita" },
-                { label: "Materi & Khazanah Pramuka", href: "/artikel" },
-                { label: "Galeri Dokumentasi Foto", href: "/galeri" },
-                { label: "Donasi & Infak Pangkalan", href: "/donasi" },
-              ].map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="text-slate-400 hover:text-emerald-300 transition-colors inline-flex items-center gap-1 group"
-                  >
-                    <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-emerald-400 transition-colors" />
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact & Administrative */}
-          <div className="md:col-span-4 space-y-4">
+          {/* Contact & Secretariat */}
+          <div className="space-y-4 max-w-sm">
             <h3 className="text-white font-bold text-xs tracking-widest uppercase flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span>Sekretariat Gugus Depan</span>
@@ -98,25 +69,44 @@ export function PublicFooter() {
                 </div>
                 <span>sekretariat@mhscout.id</span>
               </li>
-              <li className="pt-2">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-300 bg-scout-900/80 border border-emerald-700/60 hover:bg-emerald-900/60 hover:text-white transition-all shadow-xs"
-                >
-                  <span>Portal Masuk Petugas / Pembina</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
-                </Link>
-              </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-emerald-950/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+        {/* Bottom Bar: Copyright, Dedication & Developer Attribution */}
+        <div className="mt-12 pt-8 border-t border-emerald-950/80 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <p>© {currentYear} MH SCOUT. Hak Cipta Dilindungi Undang-Undang.</p>
-          <p className="flex items-center gap-1.5 text-slate-400">
-            <span>Didedikasikan untuk kemajuan Gerakan Pramuka Indonesia</span>
-            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-          </p>
+
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-4 gap-y-2 text-slate-400">
+            <p className="flex items-center gap-1.5 text-slate-400">
+              <span>Didedikasikan untuk kemajuan Gerakan Pramuka Indonesia</span>
+              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+            </p>
+            <span className="hidden md:inline text-slate-700">•</span>
+            <p className="flex items-center gap-2">
+              <span>
+                Web Aplikasi dikembangkan oleh{" "}
+                <span className="text-emerald-300 font-bold tracking-wide">ZUBED SA</span>
+              </span>
+              <a
+                href="https://wa.me/6281717594886"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-950/90 hover:bg-[#25D366] text-[#25D366] hover:text-white border border-emerald-700/60 transition-all shadow-xs group"
+                title="Hubungi Pengembang (ZUBED SA) di WhatsApp: 081717594886"
+                aria-label="WhatsApp ZUBED SA"
+              >
+                <svg
+                  className="w-4 h-4 fill-current group-hover:scale-110 transition-transform"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.98.578 3.826 1.574 5.378L2.054 22l4.802-1.488A9.957 9.957 0 0012.004 22c5.524 0 10.004-4.48 10.004-10.004C22.008 6.48 17.528 2 12.004 2zm5.82 14.28c-.244.686-1.42 1.32-1.956 1.408-.518.084-1.18.12-3.412-.806-2.618-1.086-4.306-3.738-4.436-3.912-.13-.174-1.056-1.406-1.056-2.68 0-1.276.666-1.902.906-2.164.24-.26.524-.326.7-.326.176 0 .35.002.504.01.164.008.384-.062.6.458.22.532.752 1.834.818 1.968.066.134.11.29.022.466-.088.176-.132.286-.264.44-.132.154-.278.344-.396.462-.132.13-.27.272-.116.536.154.264.684 1.126 1.468 1.824 1.01.898 1.86 1.176 2.124 1.308.264.132.418.11.572-.066.154-.176.66-.77.836-1.034.176-.264.352-.22.594-.132.242.088 1.54.726 1.804.858.264.132.44.198.506.308.066.11.066.638-.178 1.324z" />
+                </svg>
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

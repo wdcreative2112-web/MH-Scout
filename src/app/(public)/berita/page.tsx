@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { Newspaper, ArrowRight, Calendar, User, Search, Flame } from "lucide-react";
+import { ShareBar } from "@/components/public/ShareBar";
 
 export const dynamic = "force-dynamic";
 
@@ -156,6 +157,15 @@ export default async function BeritaListPage({
                     <span>Baca Selengkapnya</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                   </Link>
+                  <ShareBar
+                    variant="card-icon"
+                    title={item.title}
+                    summary={item.summary}
+                    slug={item.slug}
+                    type="berita"
+                    coverImage={item.coverImage}
+                    category={item.category?.name}
+                  />
                 </div>
               </article>
             </ScrollReveal>

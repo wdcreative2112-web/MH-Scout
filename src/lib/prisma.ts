@@ -5,7 +5,7 @@ import fs from "fs";
 if (process.platform !== "win32") {
   delete process.env.PRISMA_QUERY_ENGINE_LIBRARY;
 } else {
-  // Point explicitly to matching Prisma 6.4 query engine binary on Windows local dev
+  // Point explicitly to matching Prisma query engine binary on Windows local dev
   try {
     const enginesDir = path.resolve(process.cwd(), "node_modules/@prisma/engines");
     const engineSrc = path.join(enginesDir, "query_engine-windows.dll.node");
@@ -135,6 +135,59 @@ if (!(PrismaNeon.prototype as any).dispose) {
   };
 }
 
+let _reqCount = 1n;
+function getPrismaReqId() {
+  return String(_reqCount++);
+}
+
+export function wrapNativeEngineInstance(nativeEngine: any) {
+  if (!nativeEngine || nativeEngine._wrappedForPrisma6) return;
+  nativeEngine._wrappedForPrisma6 = true;
+
+  const origConnect = nativeEngine.connect.bind(nativeEngine);
+  nativeEngine.connect = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length < 2) return origConnect(args[0] || "{}", reqId);
+    return origConnect(...args);
+  };
+
+  const origDisconnect = nativeEngine.disconnect.bind(nativeEngine);
+  nativeEngine.disconnect = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length < 2) return origDisconnect(args[0] || "{}", reqId);
+    return origDisconnect(...args);
+  };
+
+  const origQuery = nativeEngine.query.bind(nativeEngine);
+  nativeEngine.query = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length === 2) return origQuery(args[0], args[1] || "{}", undefined, reqId);
+    if (args.length === 3) return origQuery(args[0], args[1] || "{}", args[2], reqId);
+    return origQuery(...args);
+  };
+
+  const origStartTx = nativeEngine.startTransaction.bind(nativeEngine);
+  nativeEngine.startTransaction = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length < 3) return origStartTx(args[0], args[1] || "{}", reqId);
+    return origStartTx(...args);
+  };
+
+  const origCommitTx = nativeEngine.commitTransaction.bind(nativeEngine);
+  nativeEngine.commitTransaction = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length < 3) return origCommitTx(args[0], args[1] || "{}", reqId);
+    return origCommitTx(...args);
+  };
+
+  const origRollbackTx = nativeEngine.rollbackTransaction.bind(nativeEngine);
+  nativeEngine.rollbackTransaction = async (...args: any[]) => {
+    const reqId = getPrismaReqId();
+    if (args.length < 3) return origRollbackTx(args[0], args[1] || "{}", reqId);
+    return origRollbackTx(...args);
+  };
+}
+
 const prismaClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL || "";
   const pool = new (Pool as any)({ connectionString }) as Pool;
@@ -143,7 +196,19 @@ const prismaClientSingleton = () => {
     console.warn("Neon pool idle connection warning:", err?.message);
   });
 
-  const adapter = new PrismaNeon(pool) as any;
+  const adapter = new PrismaNeon(pool, { schema: "public" }) as any;
+  adapter.getConnectionInfo = () => ({
+    ok: true,
+    value: {
+      schemaName: "public",
+      maxBindValues: 65535,
+      supportsRelationJoins: false,
+    },
+    schemaName: "public",
+    maxBindValues: 65535,
+    supportsRelationJoins: false,
+  });
+
   if (typeof adapter.executeScript !== "function") {
     adapter.executeScript = async (script: string) => {
       try {
@@ -181,19 +246,60 @@ const prismaClientSingleton = () => {
     };
   }
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     adapter: adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   } as any);
+
+  // Hook into client's engine when initialized
+  const engineWrapper = (client as any)._engine;
+  if (engineWrapper) {
+    const patchCurrentEngine = () => {
+      if (engineWrapper.engine) {
+        wrapNativeEngineInstance(engineWrapper.engine);
+      }
+    };
+
+    patchCurrentEngine();
+
+    const origInstantiate = engineWrapper.instantiateLibrary?.bind(engineWrapper);
+    if (origInstantiate) {
+      engineWrapper.instantiateLibrary = async function (...args: any[]) {
+        const res = await origInstantiate(...args);
+        patchCurrentEngine();
+        return res;
+      };
+    }
+
+    const origStart = engineWrapper.start?.bind(engineWrapper);
+    if (origStart) {
+      engineWrapper.start = async function (...args: any[]) {
+        if (!engineWrapper.engine && engineWrapper.instantiateLibrary) {
+          await engineWrapper.instantiateLibrary();
+        }
+        patchCurrentEngine();
+        return origStart(...args);
+      };
+    }
+  }
+
+  return client;
 };
 
 declare global {
   var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+  var __prisma_version: undefined | number;
 }
 
-// Prisma Client singleton with Neon Serverless Adapter
-export const prisma = globalThis.prisma ?? prismaClientSingleton();
+// Increment version to discard any stale singleton cached in Node.js dev server memory
+const CURRENT_PRISMA_VERSION = 4;
 
+export const prisma =
+  globalThis.__prisma_version === CURRENT_PRISMA_VERSION && globalThis.prisma
+    ? globalThis.prisma
+    : prismaClientSingleton();
+
+globalThis.__prisma_version = CURRENT_PRISMA_VERSION;
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
 
 export default prisma;

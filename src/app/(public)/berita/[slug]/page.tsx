@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { Calendar, User, Eye, ArrowLeft, Flame, ArrowRight } from "lucide-react";
+import { ShareBar } from "@/components/public/ShareBar";
+import { getAbsoluteImageUrl, getAbsoluteUrl } from "@/lib/share";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +25,40 @@ export async function generateMetadata({
     if (!item || item.status !== "TERBIT") {
       return { title: "Berita Tidak Ditemukan — MH SCOUT" };
     }
+
+    const canonicalUrl = getAbsoluteUrl(`/berita/${item.slug}`);
+    const resolvedImageUrl = getAbsoluteImageUrl(item.coverImage);
+
     return {
       title: `${item.title} — MH SCOUT`,
       description: item.summary,
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
+        type: "article",
+        locale: "id_ID",
+        url: canonicalUrl,
+        siteName: "MH SCOUT — Pangkalan Gerakan Pramuka",
         title: item.title,
         description: item.summary,
-        images: item.coverImage ? [item.coverImage] : [],
+        publishedTime: item.publishedAt?.toISOString() || item.createdAt.toISOString(),
+        authors: item.authorName ? [item.authorName] : undefined,
+        section: item.category?.name || "Warta Kepramukaan",
+        images: [
+          {
+            url: resolvedImageUrl,
+            width: 1200,
+            height: 630,
+            alt: item.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: item.title,
+        description: item.summary,
+        images: [resolvedImageUrl],
       },
     };
   } catch {
@@ -121,6 +150,19 @@ export default async function BeritaDetailPage({
               {item.views + 1} kali dibaca
             </span>
           </div>
+
+          {/* Quick Share to WhatsApp (Top Compact Bar) */}
+          <div className="pt-1">
+            <ShareBar
+              variant="compact"
+              title={item.title}
+              summary={item.summary}
+              slug={item.slug}
+              type="berita"
+              coverImage={item.coverImage}
+              category={item.category?.name}
+            />
+          </div>
         </div>
       </ScrollReveal>
 
@@ -149,6 +191,19 @@ export default async function BeritaDetailPage({
         <div className="prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed space-y-4 whitespace-pre-line">
           {item.content}
         </div>
+      </ScrollReveal>
+
+      {/* Bottom Share Banner (Dedicated Call to Action) */}
+      <ScrollReveal direction="up" delayMs={120}>
+        <ShareBar
+          variant="banner"
+          title={item.title}
+          summary={item.summary}
+          slug={item.slug}
+          type="berita"
+          coverImage={item.coverImage}
+          category={item.category?.name}
+        />
       </ScrollReveal>
 
       {/* Related News */}

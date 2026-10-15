@@ -23,7 +23,6 @@ const DEFAULT_ACCOUNTS: DonationAccount[] = [
     bankName: "Bank Syariah Indonesia (BSI)",
     accountNumber: "7198234501",
     accountHolder: "PRAMUKA GUGUS DEPAN MH SCOUT",
-    qrImageUrl: "https://images.unsplash.com/photo-1595079672139-5470805c50bc?w=600&auto=format&fit=crop&q=80",
     description: "Rekening operasional utama kegiatan kepanduan & infak",
     isActive: true,
     sortOrder: 1,
@@ -49,7 +48,7 @@ const DEFAULT_ACCOUNTS: DonationAccount[] = [
   {
     id: "acc-qris",
     bankName: "QRIS Nasional (Semua Bank & E-Wallet)",
-    accountNumber: "NMID: ID1020087192837",
+    accountNumber: "QRIS",
     accountHolder: "PRAMUKA MH SCOUT RESMI",
     qrImageUrl: "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=00020101021126590014ID.GO.PRAMUKA011893600918000000000002030000303UME51440014ID.LINKAJA.WWW02159360091800000005204581453033605802ID5916PRAMUKA+MH+SCOUT6007JAKARTA61051234062070703A016304B184",
     description: "Scan langsung menggunakan GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
@@ -579,7 +578,34 @@ export async function rejectDonation(
 // ACCOUNTS & QRIS
 // ----------------------------------------------------------------------
 
+// Helper aman untuk Prisma delegate donationAccount (fleksibel jika prisma client belum dire-generate)
+const getPrismaAccount = () => (prisma as any)?.donationAccount;
+
 export async function getDonationAccounts(): Promise<DonationAccount[]> {
+  try {
+    const delegate = getPrismaAccount();
+    if (delegate) {
+      const dbAccounts = await delegate.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+      });
+      if (dbAccounts && dbAccounts.length > 0) {
+        return dbAccounts.map((a: any) => ({
+          id: a.id,
+          bankName: a.bankName,
+          accountNumber: a.accountNumber,
+          accountHolder: a.accountHolder,
+          qrImageUrl: a.qrImageUrl,
+          description: a.description,
+          isActive: a.isActive,
+          sortOrder: a.sortOrder,
+        }));
+      }
+    }
+  } catch {
+    // fallback to store
+  }
+
   const store = loadStore();
   return store.accounts
     .filter((a) => a.isActive)
@@ -587,6 +613,29 @@ export async function getDonationAccounts(): Promise<DonationAccount[]> {
 }
 
 export async function getAllDonationAccountsAdmin(): Promise<DonationAccount[]> {
+  try {
+    const delegate = getPrismaAccount();
+    if (delegate) {
+      const dbAccounts = await delegate.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
+      if (dbAccounts && dbAccounts.length > 0) {
+        return dbAccounts.map((a: any) => ({
+          id: a.id,
+          bankName: a.bankName,
+          accountNumber: a.accountNumber,
+          accountHolder: a.accountHolder,
+          qrImageUrl: a.qrImageUrl,
+          description: a.description,
+          isActive: a.isActive,
+          sortOrder: a.sortOrder,
+        }));
+      }
+    }
+  } catch {
+    // fallback to store
+  }
+
   const store = loadStore();
   return store.accounts.sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -599,40 +648,129 @@ export async function saveDonationAccount(
   }
 ): Promise<DonationAccount> {
   const store = loadStore();
+  let savedAccount: DonationAccount;
 
+  // 1. Simpan di store file lokal
   if (account.id) {
     const idx = store.accounts.findIndex((a) => a.id === account.id);
     if (idx !== -1) {
-      const updated: DonationAccount = {
+      savedAccount = {
         ...store.accounts[idx],
         ...account,
       };
-      store.accounts[idx] = updated;
-      saveStore(store);
-      return updated;
+      store.accounts[idx] = savedAccount;
+    } else {
+      savedAccount = {
+        id: account.id,
+        bankName: account.bankName,
+        accountNumber: account.accountNumber,
+        accountHolder: account.accountHolder,
+        qrImageUrl: account.qrImageUrl || null,
+        description: account.description || null,
+        isActive: account.isActive ?? true,
+        sortOrder: account.sortOrder ?? store.accounts.length + 1,
+      };
+      store.accounts.push(savedAccount);
     }
+  } else {
+    savedAccount = {
+      id: `acc-${Date.now()}`,
+      bankName: account.bankName,
+      accountNumber: account.accountNumber,
+      accountHolder: account.accountHolder,
+      qrImageUrl: account.qrImageUrl || null,
+      description: account.description || null,
+      isActive: account.isActive ?? true,
+      sortOrder: account.sortOrder ?? store.accounts.length + 1,
+    };
+    store.accounts.push(savedAccount);
   }
 
-  const newAcc: DonationAccount = {
-    id: `acc-${Date.now()}`,
-    bankName: account.bankName,
-    accountNumber: account.accountNumber,
-    accountHolder: account.accountHolder,
-    qrImageUrl: account.qrImageUrl || null,
-    description: account.description || null,
-    isActive: account.isActive ?? true,
-    sortOrder: account.sortOrder ?? store.accounts.length + 1,
-  };
-
-  store.accounts.push(newAcc);
   saveStore(store);
-  return newAcc;
+
+  // 2. Dual-write sinkronisasi ke Prisma PostgreSQL database
+  try {
+    const delegate = getPrismaAccount();
+    if (delegate) {
+      let existingDb: any = null;
+      if (account.id) {
+        existingDb = await delegate.findUnique({
+          where: { id: account.id },
+        }).catch(() => null);
+      }
+      if (!existingDb && account.accountNumber) {
+        existingDb = await delegate.findFirst({
+          where: { accountNumber: account.accountNumber },
+        }).catch(() => null);
+      }
+
+      if (existingDb) {
+        const dbAcc = await delegate.update({
+          where: { id: existingDb.id },
+          data: {
+            bankName: savedAccount.bankName,
+            accountNumber: savedAccount.accountNumber,
+            accountHolder: savedAccount.accountHolder,
+            qrImageUrl: savedAccount.qrImageUrl,
+            description: savedAccount.description,
+            isActive: savedAccount.isActive,
+            sortOrder: savedAccount.sortOrder,
+          },
+        });
+        savedAccount.id = dbAcc.id;
+        const stIdx = store.accounts.findIndex(
+          (a) => a.accountNumber === savedAccount.accountNumber || a.id === account.id
+        );
+        if (stIdx !== -1) {
+          store.accounts[stIdx].id = dbAcc.id;
+          saveStore(store);
+        }
+      } else {
+        const dbAcc = await delegate.create({
+          data: {
+            bankName: savedAccount.bankName,
+            accountNumber: savedAccount.accountNumber,
+            accountHolder: savedAccount.accountHolder,
+            qrImageUrl: savedAccount.qrImageUrl,
+            description: savedAccount.description,
+            isActive: savedAccount.isActive,
+            sortOrder: savedAccount.sortOrder,
+          },
+        });
+        savedAccount.id = dbAcc.id;
+        const stIdx = store.accounts.findIndex(
+          (a) => a.accountNumber === savedAccount.accountNumber || a.id === account.id
+        );
+        if (stIdx !== -1) {
+          store.accounts[stIdx].id = dbAcc.id;
+          saveStore(store);
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.warn("Prisma donationAccount dual-write notice:", dbErr);
+  }
+
+  return savedAccount;
 }
 
 export async function deleteDonationAccount(id: string): Promise<boolean> {
   const store = loadStore();
   store.accounts = store.accounts.filter((a) => a.id !== id);
-  return saveStore(store);
+  saveStore(store);
+
+  try {
+    const delegate = getPrismaAccount();
+    if (delegate) {
+      await delegate.delete({
+        where: { id },
+      });
+    }
+  } catch {
+    // abaikan jika tidak ada di DB
+  }
+
+  return true;
 }
 
 // ----------------------------------------------------------------------

@@ -290,27 +290,98 @@ body {
   @apply shadow-md border-emerald-950/20 -translate-y-0.5;
 }
 
-/* Print Optimization */
+/* Print & PDF Export Optimization */
 @media print {
-  aside,
-  nav,
-  header,
-  button,
-  .no-print {
-    display: none !important;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
-  body {
-    background: white !important;
-    color: black !important;
+
+  /* 1. Hide the entire application DOM tree */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 2. Only show the target printable sheets and their descendants */
+  #printable-permit-letter,
+  #printable-permit-letter *,
+  #printable-reports-document,
+  #printable-reports-document *,
+  #printable-attendance-recap,
+  #printable-attendance-recap *,
+  #printable-general-letter,
+  #printable-general-letter * {
+    visibility: visible !important;
+  }
+
+  /* 3. Re-anchor the printable document to top-left of paper */
+  #printable-permit-letter,
+  #printable-reports-document,
+  #printable-attendance-recap,
+  #printable-general-letter {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    z-index: 9999999 !important;
+  }
+
+  /* 4. Strip any backdrop blur or dark modal backgrounds */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
     font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
-  .print-only {
-    display: block !important;
+
+  .fixed,
+  .backdrop-blur-xs,
+  .bg-slate-950\/80,
+  .bg-slate-950\/60 {
+    background: transparent !important;
+    backdrop-filter: none !important;
   }
+
+  /* 5. Force exact colors for badges and emblems */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* 6. Explicitly suppress UI buttons and forms */
+  aside,
+  nav,
+  header,
+  button,
+  input,
+  select,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* Document Capture Mode for PDF Generation */
+.pdf-rendering-active {
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background-color: #ffffff !important;
+}
+
+.pdf-rendering-active * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 /* ---------------------------------------------------- */

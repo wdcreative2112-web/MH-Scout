@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useTransition, useEffect } from "react";
+import React, { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   createMeetingAction,
@@ -12,6 +12,7 @@ import {
   saveBatchAttendanceAction,
 } from "@/actions/attendance";
 import { formatDate, formatDayDate } from "@/lib/utils";
+import { downloadElementAsPdf } from "@/lib/pdf-export";
 import {
   CheckSquare,
   Plus,
@@ -111,6 +112,27 @@ export function AttendanceClientView({
 
   // Search in sheet
   const [searchMember, setSearchMember] = useState("");
+
+  // PDF Export State & Ref for Attendance Recap
+  const [isExportingRecapPdf, setIsExportingRecapPdf] = useState(false);
+  const recapPrintRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadRecapPdf = async () => {
+    if (!recapPrintRef.current) return;
+    setIsExportingRecapPdf(true);
+    try {
+      const fileName = `Rekap-Presensi-Pramuka-${formatDate(new Date()).replace(/\s+/g, "-")}`;
+      await downloadElementAsPdf(recapPrintRef.current, {
+        filename: fileName,
+        orientation: "portrait",
+      });
+    } catch (err: any) {
+      console.error("Gagal mengunduh PDF rekap:", err);
+      alert(err?.message || "Gagal membuat berkas PDF rekap. Silakan coba beberapa saat lagi.");
+    } finally {
+      setIsExportingRecapPdf(false);
+    }
+  };
 
   // Routine Schedule Config state
   const [currentRoutine, setCurrentRoutine] = useState<RoutineScheduleConfig>(
@@ -254,12 +276,42 @@ export function AttendanceClientView({
     return false;
   }, [attendanceMap, initialMap, notesMap, initialNotes]);
 
+  // Sort meetings by proximity to Hari H (today):
+  // 1. Hari H (today, diff === 0)
+  // 2. Upcoming meetings closest to Hari H first (e.g. H-1 tomorrow, then H-2, H-8 next week)
+  // 3. Past meetings (most recent past to older past)
+  const sortedMeetings = useMemo(() => {
+    return [...meetings].sort((a, b) => {
+      const da = new Date(a.meetingDate);
+      const db = new Date(b.meetingDate);
+      const dayA = new Date(da.getFullYear(), da.getMonth(), da.getDate(), 0, 0, 0, 0).getTime();
+      const dayB = new Date(db.getFullYear(), db.getMonth(), db.getDate(), 0, 0, 0, 0).getTime();
+
+      const diffA = Math.round((dayA - today.getTime()) / (1000 * 60 * 60 * 24));
+      const diffB = Math.round((dayB - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      const catA = diffA === 0 ? 0 : diffA > 0 ? 1 : 2;
+      const catB = diffB === 0 ? 0 : diffB > 0 ? 1 : 2;
+
+      if (catA !== catB) {
+        return catA - catB;
+      }
+      if (catA === 1) {
+        return diffA - diffB; // Closest upcoming to Hari H first
+      }
+      if (catA === 2) {
+        return diffB - diffA; // Most recent past first
+      }
+      return 0;
+    });
+  }, [meetings, today]);
+
   // Schedule filtering & searching
   const [scheduleStatusFilter, setScheduleStatusFilter] = useState<"ALL" | "TERJADWAL" | "SELESAI" | "DIBATALKAN">("ALL");
   const [scheduleSearch, setScheduleSearch] = useState("");
 
   const filteredMeetings = useMemo(() => {
-    return meetings.filter((m) => {
+    return sortedMeetings.filter((m) => {
       if (scheduleStatusFilter !== "ALL" && m.status !== scheduleStatusFilter) return false;
       if (scheduleSearch) {
         const q = scheduleSearch.toLowerCase();
@@ -270,7 +322,7 @@ export function AttendanceClientView({
       }
       return true;
     });
-  }, [meetings, scheduleStatusFilter, scheduleSearch]);
+  }, [sortedMeetings, scheduleStatusFilter, scheduleSearch]);
 
   // Filter members displayed in current sheet
   const displayedMembers = useMemo(() => {
@@ -815,7 +867,7 @@ export function AttendanceClientView({
                     onChange={(e) => handleChangeMeeting(e.target.value)}
                     className="w-full pl-3.5 pr-10 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-slate-50/50 text-slate-900 shadow-2xs"
                   >
-                    {meetings.map((m) => {
+                    {sortedMeetings.map((m) => {
                       const mDate = new Date(m.meetingDate);
                       const mDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
                       const isToday = mDay.getTime() === today.getTime();
@@ -839,7 +891,7 @@ export function AttendanceClientView({
                         </option>
                       );
                     })}
-                    {meetings.length === 0 && <option value="">(Belum ada jadwal pertemuan)</option>}
+                    {sortedMeetings.length === 0 && <option value="">(Belum ada jadwal pertemuan)</option>}
                   </select>
                 </div>
               </div>
@@ -1823,8 +1875,56 @@ export function AttendanceClientView({
           </div>
 
           {/* Member Recapitulation Detailed Table */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div
+            ref={recapPrintRef}
+            id="printable-attendance-recap"
+            className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0"
+          >
+            {/* Formal Kop Surat for PDF & Physical Print */}
+            <div className="border-b-2 border-slate-900 pb-3 mb-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="w-14 h-14 shrink-0 flex items-center justify-center">
+                  <img
+                    src="/logo.jpeg"
+                    alt="Logo Pramuka"
+                    className="w-12 h-12 object-contain rounded-lg"
+                  />
+                </div>
+                <div className="flex-1 text-center font-sans">
+                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600">
+                    GERAKAN PRAMUKA GUGUS DEPAN
+                  </h2>
+                  <h1 className="text-sm sm:text-base font-black uppercase text-slate-900 tracking-tight">
+                    MH SCOUT • PANGKALAN MASLAHATUL HIDAYAH
+                  </h1>
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
+                    LAPORAN REKAPITULASI PRESENSI & KEHADIRAN ANGGOTA
+                  </p>
+                </div>
+                <div className="w-14 h-14 shrink-0 hidden sm:flex items-center justify-center">
+                  <img
+                    src="/logo.jpeg"
+                    alt="Tunas Kelapa"
+                    className="w-10 h-10 object-contain opacity-90"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-slate-200 mt-2 pt-1.5 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-600 gap-1">
+                <span>
+                  Total Sesi: <strong>{validMeetings.length} Sesi Latihan</strong> | Filter:{" "}
+                  <strong>
+                    {recapReguFilter === "ALL"
+                      ? "Semua Regu"
+                      : groups.find((g) => g.id === recapReguFilter)?.name || "Regu Terpilih"}
+                  </strong>
+                </span>
+                <span>
+                  Tanggal Rekap: <strong>{formatDate(new Date())}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
               <div>
                 <h3 className="text-base font-black text-slate-900">
                   Laporan Rekapitulasi Presensi Anggota
@@ -1834,30 +1934,52 @@ export function AttendanceClientView({
                 </p>
               </div>
 
-              {/* Action Buttons: Export CSV & Print */}
-              <div className="flex items-center gap-2">
+              {/* Action Buttons: Unduh PDF, Cetak Fisik, Export CSV */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleExportCSV}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                  onClick={handleDownloadRecapPdf}
+                  disabled={isExportingRecapPdf}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-60"
+                  title="Unduh langsung file dokumen PDF rekapitulasi ke komputer/HP"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Export CSV</span>
+                  {isExportingRecapPdf ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Membuat PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Unduh File PDF</span>
+                    </>
+                  )}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border border-slate-700"
+                  title="Cetak langsung menggunakan printer fisik"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Cetak / PDF</span>
+                  <span>Cetak Fisik</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                  title="Export data ke format spreadsheet CSV"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>CSV</span>
                 </button>
               </div>
             </div>
 
             {/* Filter controls within recap */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 print:hidden">
               <div className="relative w-full sm:w-72">
                 <input
                   type="text"
@@ -1888,8 +2010,8 @@ export function AttendanceClientView({
               )}
             </div>
 
-            {/* Mobile Cards (Visible on small screens) */}
-            <div className="md:hidden space-y-3">
+            {/* Mobile Cards (Visible only on interactive screen, hidden in print/PDF) */}
+            <div className="md:hidden print:hidden space-y-3">
               {filteredRecapMembers.length > 0 ? (
                 filteredRecapMembers.map((member, idx) => {
                   let hCount = 0;
@@ -1983,19 +2105,19 @@ export function AttendanceClientView({
               )}
             </div>
 
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100">
+            {/* Structured Table (Always used for clean print/PDF) */}
+            <div className="hidden md:block print:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-black uppercase tracking-wider text-[11px]">
-                    <th className="p-3.5 w-12 text-center">No</th>
-                    <th className="p-3.5">Nama Lengkap</th>
-                    <th className="p-3.5">Regu</th>
-                    <th className="p-3.5 text-center text-emerald-700">Hadir</th>
-                    <th className="p-3.5 text-center text-blue-700">Izin</th>
-                    <th className="p-3.5 text-center text-amber-700">Sakit</th>
-                    <th className="p-3.5 text-center text-rose-700">Alpa</th>
-                    <th className="p-3.5 text-right">Persentase</th>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="p-3 w-12 text-center">No</th>
+                    <th className="p-3">Nama Lengkap</th>
+                    <th className="p-3">Regu / Golongan</th>
+                    <th className="p-3 text-center text-emerald-800">Hadir</th>
+                    <th className="p-3 text-center text-blue-800">Izin</th>
+                    <th className="p-3 text-center text-amber-800">Sakit</th>
+                    <th className="p-3 text-center text-rose-800">Alpa</th>
+                    <th className="p-3 text-right">Persentase</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -2021,29 +2143,29 @@ export function AttendanceClientView({
 
                       return (
                         <tr key={member.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="p-3.5 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="p-3.5">
-                            <p className="font-black text-slate-900">{member.fullName}</p>
-                            <p className="text-[10px] text-slate-400">{member.memberNumber || "-"}</p>
+                          <td className="p-3 text-center text-slate-500 font-bold">{idx + 1}</td>
+                          <td className="p-3">
+                            <p className="font-bold text-slate-900">{member.fullName}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">{member.memberNumber || "-"}</p>
                           </td>
-                          <td className="p-3.5 font-semibold text-slate-600">
+                          <td className="p-3 font-medium text-slate-600">
                             {member.group?.name || "-"}
                           </td>
-                          <td className="p-3.5 text-center font-black text-emerald-700 bg-emerald-50/30">
+                          <td className="p-3 text-center font-bold text-emerald-700 bg-emerald-50/40">
                             {hCount}
                           </td>
-                          <td className="p-3.5 text-center font-black text-blue-700 bg-blue-50/30">
+                          <td className="p-3 text-center font-bold text-blue-700 bg-blue-50/40">
                             {iCount}
                           </td>
-                          <td className="p-3.5 text-center font-black text-amber-700 bg-amber-50/30">
+                          <td className="p-3 text-center font-bold text-amber-700 bg-amber-50/40">
                             {sCount}
                           </td>
-                          <td className="p-3.5 text-center font-black text-rose-700 bg-rose-50/30">
+                          <td className="p-3 text-center font-bold text-rose-700 bg-rose-50/40">
                             {aCount}
                           </td>
-                          <td className="p-3.5 text-right">
+                          <td className="p-3 text-right">
                             <span
-                              className={`font-black px-2.5 py-1 rounded-lg text-xs ${
+                              className={`font-black px-2 py-0.5 rounded text-xs ${
                                 percentage >= 80
                                   ? "bg-emerald-100 text-emerald-900"
                                   : percentage >= 50
@@ -2066,6 +2188,24 @@ export function AttendanceClientView({
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Formal Signature Block for Attendance Official Report */}
+            <div className="pt-8 mt-6 border-t border-slate-200 grid grid-cols-2 text-center text-xs font-sans">
+              <div>
+                <p className="text-slate-500">Mengetahui,</p>
+                <p className="font-bold text-slate-900 mt-1">Pembina Gugus Depan</p>
+                <div className="h-16" />
+                <p className="font-bold underline text-slate-900">Pembina Satuan</p>
+                <p className="text-[10px] text-slate-500">NTA. Gerakan Pramuka</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Dibuat oleh,</p>
+                <p className="font-bold text-slate-900 mt-1">Sekretaris / Petugas Presensi</p>
+                <div className="h-16" />
+                <p className="font-bold underline text-slate-900">Pengurus Satuan</p>
+                <p className="text-[10px] text-slate-500">MH Scout Pangkalan</p>
+              </div>
             </div>
           </div>
         </div>

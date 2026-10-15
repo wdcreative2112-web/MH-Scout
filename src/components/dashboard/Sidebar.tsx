@@ -230,6 +230,28 @@ export function DashboardSidebar({ session, onCloseMobile }: SidebarProps) {
             <span>Keluar (Logout)</span>
           </button>
         </form>
+
+        {/* Developer attribution with WhatsApp link */}
+        <div className="pt-2 mt-2 border-t border-slate-800/80 px-2 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Dev: <strong className="text-slate-300 font-semibold">ZUBED SA</strong></span>
+          <a
+            href="https://wa.me/6281717594886"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-emerald-950/80 text-[#25D366] hover:scale-110 transition-transform"
+            title="Hubungi ZUBED SA di WhatsApp (081717594886)"
+            aria-label="WhatsApp ZUBED SA"
+          >
+            <svg
+              className="w-4 h-4 fill-current"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.98.578 3.826 1.574 5.378L2.054 22l4.802-1.488A9.957 9.957 0 0012.004 22c5.524 0 10.004-4.48 10.004-10.004C22.008 6.48 17.528 2 12.004 2zm5.82 14.28c-.244.686-1.42 1.32-1.956 1.408-.518.084-1.18.12-3.412-.806-2.618-1.086-4.306-3.738-4.436-3.912-.13-.174-1.056-1.406-1.056-2.68 0-1.276.666-1.902.906-2.164.24-.26.524-.326.7-.326.176 0 .35.002.504.01.164.008.384-.062.6.458.22.532.752 1.834.818 1.968.066.134.11.29.022.466-.088.176-.132.286-.264.44-.132.154-.278.344-.396.462-.132.13-.27.272-.116.536.154.264.684 1.126 1.468 1.824 1.01.898 1.86 1.176 2.124 1.308.264.132.418.11.572-.066.154-.176.66-.77.836-1.034.176-.264.352-.22.594-.132.242.088 1.54.726 1.804.858.264.132.44.198.506.308.066.11.066.638-.178 1.324z" />
+            </svg>
+          </a>
+        </div>
       </div>
     </aside>
   );

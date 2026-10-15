@@ -229,25 +229,47 @@ export async function saveAccountAction(formData: FormData) {
     }
 
     const id = (formData.get("id") as string) || undefined;
-    const bankName = formData.get("bankName") as string;
-    const accountNumber = formData.get("accountNumber") as string;
-    const accountHolder = formData.get("accountHolder") as string;
+    const bankName = (formData.get("bankName") as string)?.trim();
+    let accountNumber = (formData.get("accountNumber") as string)?.trim() || "";
+    const accountHolder = (formData.get("accountHolder") as string)?.trim();
     const description = (formData.get("description") as string) || null;
-    const isActive = formData.get("isActive") !== "false";
+    const isActive = formData.has("isActiveSubmitted")
+      ? formData.get("isActive") === "true" || formData.get("isActive") === "on" || formData.get("isActive") === "1"
+      : formData.get("isActive") !== "false";
     const sortOrder = parseInt((formData.get("sortOrder") as string) || "1", 10);
 
-    if (!bankName || !accountNumber || !accountHolder) {
-      return { success: false, error: "Nama bank, nomor rekening, dan nama pemilik wajib diisi." };
+    if (!bankName || !accountHolder) {
+      return { success: false, error: "Nama bank / saluran pembayaran dan nama pemilik rekening wajib diisi." };
     }
 
+    // Jika nomor rekening dikosongkan (khusus kanal QRIS), tetapkan default "QRIS"
+    if (!accountNumber) {
+      accountNumber = "QRIS";
+    }
+
+    // Penanganan QR Image: mendukung upload file atau input tautan URL langsung
     let qrImageUrl = (formData.get("existingQrImageUrl") as string) || null;
+    if (formData.get("removeQrImage") === "true") {
+      qrImageUrl = null;
+    }
+    const directQrUrl = (formData.get("qrImageUrl") as string)?.trim();
+    if (directQrUrl) {
+      qrImageUrl = directQrUrl;
+    }
+
     const qrFile = formData.get("qrImage") as File | null;
-    if (qrFile && qrFile.size > 0) {
+    if (qrFile && qrFile.size > 0 && qrFile.name) {
       try {
         const uploadRes = await uploadImage(qrFile);
         qrImageUrl = uploadRes.url;
       } catch (err: any) {
         console.warn("QRIS image upload failed:", err?.message);
+        if (!qrImageUrl) {
+          return {
+            success: false,
+            error: `Gagal memproses berkas QRIS: ${err?.message || "Format atau ukuran berkas tidak didukung"}`,
+          };
+        }
       }
     }
 
@@ -264,6 +286,7 @@ export async function saveAccountAction(formData: FormData) {
 
     revalidatePath("/dashboard/donations");
     revalidatePath("/donasi");
+    revalidatePath("/");
 
     return {
       success: true,

@@ -55,6 +55,38 @@ export default async function AttendancePage({
       }).catch(() => {});
     }
 
+    // Default to today's meeting if any exists, otherwise first meeting in list
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+    // Sort meetings by proximity to Hari H (today):
+    // 1. Hari H (today, diff === 0)
+    // 2. Upcoming meetings closest to today first (e.g. H-1 tomorrow, then H-2, H-8 next week)
+    // 3. Past meetings (most recent past to older past)
+    uniqueMeetings.sort((a, b) => {
+      const da = new Date(a.meetingDate);
+      const db = new Date(b.meetingDate);
+      const dayA = new Date(da.getFullYear(), da.getMonth(), da.getDate(), 0, 0, 0, 0).getTime();
+      const dayB = new Date(db.getFullYear(), db.getMonth(), db.getDate(), 0, 0, 0, 0).getTime();
+
+      const diffA = Math.round((dayA - today.getTime()) / (1000 * 60 * 60 * 24));
+      const diffB = Math.round((dayB - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      const catA = diffA === 0 ? 0 : diffA > 0 ? 1 : 2;
+      const catB = diffB === 0 ? 0 : diffB > 0 ? 1 : 2;
+
+      if (catA !== catB) {
+        return catA - catB;
+      }
+      if (catA === 1) {
+        return diffA - diffB; // Closest upcoming to Hari H first
+      }
+      if (catA === 2) {
+        return diffB - diffA; // Most recent past first
+      }
+      return 0;
+    });
+
     meetings = uniqueMeetings;
 
     groups = await prisma.scoutGroup.findMany({
@@ -68,9 +100,6 @@ export default async function AttendancePage({
       include: { group: true },
     });
 
-    // Default to today's meeting if any exists, otherwise first meeting in list
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const todayMeeting = meetings.find((m) => {
       const md = new Date(m.meetingDate);
       const mDay = new Date(md.getFullYear(), md.getMonth(), md.getDate(), 0, 0, 0, 0);

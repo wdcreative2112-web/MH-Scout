@@ -16,9 +16,19 @@ export default async function ReportsPage() {
   let duesList: any[] = [];
   let initialBalance = 0;
 
-  try {
-    const profile = await prisma.organizationProfile.findFirst();
-    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
+    let organizationProfile: any = null;
+
+    try {
+      const profile = await prisma.organizationProfile.findFirst();
+      initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
+      if (profile) {
+        organizationProfile = {
+          name: profile.name,
+          pangkalan: profile.pangkalan,
+          address: profile.address,
+          logoUrl: profile.logoUrl,
+        };
+      }
 
     members = await prisma.member.findMany({
       orderBy: { fullName: "asc" },
@@ -86,6 +96,7 @@ export default async function ReportsPage() {
         duesList={duesList}
         initialBalance={initialBalance}
         canViewFinance={isTreasurerOrAdmin}
+        organizationProfile={organizationProfile}
       />
     </div>
   );

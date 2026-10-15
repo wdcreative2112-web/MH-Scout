@@ -20,6 +20,7 @@ import {
   Flame,
   Heart,
 } from "lucide-react";
+import { ShareBar } from "@/components/public/ShareBar";
 
 export const dynamic = "force-dynamic";
 
@@ -365,6 +366,15 @@ export default async function HomePage() {
                       <span>Baca Selengkapnya</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </Link>
+                    <ShareBar
+                      variant="card-icon"
+                      title={news.title}
+                      summary={news.summary}
+                      slug={news.slug}
+                      type="berita"
+                      coverImage={news.coverImage}
+                      category={news.category?.name}
+                    />
                   </div>
                 </article>
               </ScrollReveal>
@@ -427,13 +437,24 @@ export default async function HomePage() {
                     </div>
                     <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                       <span>{formatDate(article.publishedAt || article.createdAt)}</span>
-                      <Link
-                        href={`/artikel/${article.slug}`}
-                        className="font-bold text-scout-800 hover:text-emerald-600 inline-flex items-center gap-1 group/btn"
-                      >
-                        <span>Pelajari</span>
-                        <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/artikel/${article.slug}`}
+                          className="font-bold text-scout-800 hover:text-emerald-600 inline-flex items-center gap-1 group/btn"
+                        >
+                          <span>Pelajari</span>
+                          <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
+                        </Link>
+                        <ShareBar
+                          variant="card-icon"
+                          title={article.title}
+                          summary={article.summary}
+                          slug={article.slug}
+                          type="artikel"
+                          coverImage={article.coverImage}
+                          category={article.category?.name}
+                        />
+                      </div>
                     </div>
                   </div>
                 </ScrollReveal>
