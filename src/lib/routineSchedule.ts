@@ -37,14 +37,16 @@ const DEFAULT_CONFIG: RoutineScheduleConfig = {
 let _cachedScheduleConfig: RoutineScheduleConfig | null = null;
 
 export async function getRoutineScheduleConfig(): Promise<RoutineScheduleConfig> {
-  if (_cachedScheduleConfig) {
-    return _cachedScheduleConfig;
+  const cached = _cachedScheduleConfig;
+  if (cached) {
+    return cached;
   }
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-      _cachedScheduleConfig = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-      return _cachedScheduleConfig;
+      const parsed: RoutineScheduleConfig = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+      _cachedScheduleConfig = parsed;
+      return parsed;
     }
   } catch (err) {
     console.warn("Notice: could not read routine schedule from file, using fallback:", err);
