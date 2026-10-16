@@ -186,7 +186,6 @@ export async function createPermitLetterAction(formData: FormData) {
   const leaderName = (formData.get("leaderName") as string)?.trim() || "Pembina Satuan";
   const leaderNip = (formData.get("leaderNip") as string)?.trim() || "-";
   const createdPlace = (formData.get("createdPlace") as string)?.trim() || "Jakarta";
-  const memberId = (formData.get("memberId") as string) || "";
   const activityId = (formData.get("activityId") as string) || "";
 
   if (!letterNumber) {
