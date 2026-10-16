@@ -5,21 +5,17 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const ping = await prisma.$queryRaw`SELECT 1 as connected, NOW() as current_time`;
-    const userCount = await prisma.user.count();
+    await prisma.$queryRaw`SELECT 1 as connected`;
 
     return NextResponse.json({
-      status: "connected",
-      message: "Database Neon berhasil terhubung!",
-      ping,
-      userCount,
+      status: "ok",
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
       {
         status: "error",
-        message: err?.message,
-        code: err?.code,
+        message: "Database connection failed",
       },
       { status: 500 }
     );

@@ -32,8 +32,8 @@
       "bankName": "QRIS Nasional (Semua Bank & E-Wallet)",
       "accountNumber": "QRIS",
       "accountHolder": "PRAMUKA MH SCOUT RESMI",
-      "qrImageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=00020101021126590014ID.GO.PRAMUKA011893600918000000000002030000303UME51440014ID.LINKAJA.WWW02159360091800000005204581453033605802ID5916PRAMUKA+MH+SCOUT6007JAKARTA61051234062070703A016304B184",
-      "description": "Scan langsung menggunakan GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
+      "qrImageUrl": null,
+      "description": "Scan barcode QRIS resmi yang diunggah oleh admin pangkalan untuk donasi via GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
       "isActive": true,
       "sortOrder": 4
     }

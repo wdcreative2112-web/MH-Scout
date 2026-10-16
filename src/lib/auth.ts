@@ -5,8 +5,12 @@ import { UserSession, Role } from "@/types";
 
 const COOKIE_NAME = "mhscout_session";
 const LEGACY_COOKIE_NAME = "pramukaone_session";
+const rawSecret = process.env.AUTH_SECRET;
+if (!rawSecret && process.env.NODE_ENV === "production") {
+  console.error("FATAL: AUTH_SECRET environment variable is missing in production environment!");
+}
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET || "mhscout-super-secret-default-key-min-32-chars-long!"
+  rawSecret || "mhscout-development-secret-key-do-not-use-in-production-min-32-chars!"
 );
 
 export async function hashPassword(password: string): Promise<string> {
@@ -15,7 +19,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  if (hash === password) return true;
+  if (!password || !hash) return false;
   try {
     return await bcrypt.compare(password, hash);
   } catch {

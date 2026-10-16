@@ -1,10 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // SEC-01 Fix: Restrict access to authenticated ADMINs or matching secret header
+    const secretHeader = request.headers.get("x-sync-secret");
+    const expectedSecret = process.env.DB_SYNC_SECRET || process.env.AUTH_SECRET;
+    const session = await getSession();
+
+    const isAuthorized =
+      (expectedSecret && secretHeader === expectedSecret) ||
+      (session && session.role === "ADMIN");
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { success: false, error: "Akses ditolak: Endpoint ini hanya untuk Administrator terotentikasi." },
+        { status: 403 }
+      );
+    }
+
     const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || "";
     if (!dbUrl) {
       return NextResponse.json({ success: false, error: "DATABASE_URL is missing" }, { status: 500 });

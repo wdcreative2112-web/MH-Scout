@@ -20,6 +20,7 @@ export default async function AttendancePage({
   let currentMeetingRecords: any[] = [];
   let activeMeeting = null;
   let routineConfig = null;
+  let lastAuditLog: any = null;
 
   try {
     // Sinkronkan jadwal rutin otomatis jika ada sesi yang perlu diterbitkan
@@ -115,6 +116,12 @@ export default async function AttendancePage({
           where: { meetingId: activeMeeting.id },
           include: { member: true },
         });
+
+        lastAuditLog = await prisma.attendanceAuditLog.findFirst({
+          where: { meetingId: activeMeeting.id },
+          orderBy: { createdAt: "desc" },
+          include: { changedBy: { select: { name: true, role: true } } },
+        });
       }
     }
   } catch {
@@ -147,6 +154,11 @@ export default async function AttendancePage({
         initialMode={isKetuaRegu ? "REGU" : ((mode as "ALL" | "REGU") || "ALL")}
         initialReguId={isKetuaRegu ? userGroupId : (reguId || "")}
         routineConfig={routineConfig}
+        lastAuditLog={lastAuditLog ? {
+          userName: lastAuditLog.changedBy?.name || "Pengurus",
+          userRole: lastAuditLog.changedBy?.role || "PENGURUS",
+          createdAt: lastAuditLog.createdAt.toISOString(),
+        } : null}
       />
     </div>
   );

@@ -19,6 +19,35 @@ export interface AuthActionResult {
   redirectTo?: string;
 }
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 60 * 1000; // 1 menit
+const failedLoginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+function isLoginRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = failedLoginAttempts.get(key);
+  if (!entry) return false;
+  if (now - entry.firstAttempt > LOGIN_WINDOW_MS) {
+    failedLoginAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= MAX_LOGIN_ATTEMPTS;
+}
+
+function registerFailedLogin(key: string) {
+  const now = Date.now();
+  const entry = failedLoginAttempts.get(key);
+  if (!entry || now - entry.firstAttempt > LOGIN_WINDOW_MS) {
+    failedLoginAttempts.set(key, { count: 1, firstAttempt: now });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function resetFailedLogin(key: string) {
+  failedLoginAttempts.delete(key);
+}
+
 export async function loginAction(formData: FormData): Promise<AuthActionResult> {
   const rawEmail = formData.get("email");
   const rawPassword = formData.get("password");
@@ -36,6 +65,14 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
   }
 
   const { email, password } = parseResult.data;
+  const rateLimitKey = email.toLowerCase().trim();
+
+  if (isLoginRateLimited(rateLimitKey)) {
+    return {
+      success: false,
+      error: "Terlalu banyak percobaan login gagal. Mohon tunggu 1 menit sebelum mencoba kembali demi keamanan akun.",
+    };
+  }
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
@@ -53,6 +90,7 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
     });
 
     if (!user) {
+      registerFailedLogin(rateLimitKey);
       return {
         success: false,
         error: "Email atau password salah.",
@@ -68,11 +106,15 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
 
     const isValidPassword = await verifyPassword(password, user.password);
     if (!isValidPassword) {
+      registerFailedLogin(rateLimitKey);
       return {
         success: false,
         error: "Email atau password salah.",
       };
     }
+
+    // Login berhasil, reset counter percobaan gagal
+    resetFailedLogin(rateLimitKey);
 
     // Resolve group info for KETUA_REGU safely
     let groupId: string | null = (user as any).groupId || null;
@@ -124,15 +166,68 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
       redirectTo: targetUrl,
     };
   } catch (err: any) {
-    console.error("Login error:", err);
-    try {
-      const fs = require("fs");
-      fs.writeFileSync("d:/WEB/PramukaOne/login-error.log", `[${new Date().toISOString()}]\nMessage: ${err?.message}\nStack: ${err?.stack}\nCode: ${err?.code}\nMeta: ${JSON.stringify(err?.meta || {})}\n\n`, { flag: "a" });
-    } catch {}
+    console.error("Login exception:", err?.message || err);
     return {
       success: false,
-      error: `Gagal login: ${err?.message || err?.toString() || "Terjadi kesalahan pada server"}`,
+      error: "Gagal memproses login karena kendala server. Silakan coba kembali atau hubungi administrator.",
     };
+  }
+}
+
+export async function changePasswordAction(formData: FormData): Promise<AuthActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { success: false, error: "Akses ditolak: Silakan login terlebih dahulu." };
+  }
+
+  const raw = {
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  };
+
+  const parsed = changePasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.errors[0]?.message || "Input password tidak valid",
+    };
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.id },
+    });
+
+    if (!user) {
+      return { success: false, error: "Data pengguna tidak ditemukan." };
+    }
+
+    const isCurrentValid = await verifyPassword(parsed.data.currentPassword, user.password);
+    if (!isCurrentValid) {
+      return { success: false, error: "Password saat ini yang Anda masukkan salah." };
+    }
+
+    const hashedPassword = await hashPassword(parsed.data.newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        userName: user.name,
+        action: "UBAH_PASSWORD",
+        module: "AUTENTIKASI",
+        details: `Pengguna ${user.name} berhasil memperbarui kata sandi mandiri.`,
+      },
+    }).catch(() => {});
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Gagal mengubah kata sandi:", err?.message || err);
+    return { success: false, error: "Terjadi kesalahan sistem saat memperbarui kata sandi." };
   }
 }
 

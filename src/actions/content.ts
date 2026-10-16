@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { slugify } from "@/lib/utils";
 import { uploadImage } from "@/lib/storage";
+import { newsSchema, articleSchema } from "@/lib/validations/content";
 
 export async function createNewsAction(formData: FormData) {
   const session = await requireAuth();
@@ -12,11 +13,20 @@ export async function createNewsAction(formData: FormData) {
     return { success: false, error: "Akses ditolak." };
   }
 
-  const title = formData.get("title") as string;
-  const summary = formData.get("summary") as string;
-  const content = formData.get("content") as string;
-  const status = (formData.get("status") as any) || "DRAF";
-  const categoryId = (formData.get("categoryId") as string) || null;
+  const raw = {
+    title: formData.get("title") as string,
+    summary: formData.get("summary") as string,
+    content: formData.get("content") as string,
+    status: (formData.get("status") as any) || "DRAF",
+    categoryId: (formData.get("categoryId") as string) || null,
+  };
+
+  const parsed = newsSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const { title, summary, content, status, categoryId } = parsed.data;
 
   let coverImage: string | null = null;
   const file = formData.get("coverImage") as File | null;
@@ -88,11 +98,20 @@ export async function createArticleAction(formData: FormData) {
     return { success: false, error: "Akses ditolak." };
   }
 
-  const title = formData.get("title") as string;
-  const summary = formData.get("summary") as string;
-  const content = formData.get("content") as string;
-  const status = (formData.get("status") as any) || "DRAF";
-  const categoryId = (formData.get("categoryId") as string) || null;
+  const raw = {
+    title: formData.get("title") as string,
+    summary: formData.get("summary") as string,
+    content: formData.get("content") as string,
+    status: (formData.get("status") as any) || "DRAF",
+    categoryId: (formData.get("categoryId") as string) || null,
+  };
+
+  const parsed = articleSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const { title, summary, content, status, categoryId } = parsed.data;
 
   let coverImage: string | null = null;
   const file = formData.get("coverImage") as File | null;
@@ -168,11 +187,24 @@ export async function updateNewsAction(id: string, formData: FormData) {
     return { success: false, error: "Berita tidak ditemukan." };
   }
 
-  const title = formData.get("title") as string;
-  const summary = formData.get("summary") as string;
-  const content = formData.get("content") as string;
-  const status = (formData.get("status") as any) || existing.status;
-  const categoryId = (formData.get("categoryId") as string) || null;
+  const raw = {
+    title: formData.get("title") as string,
+    summary: formData.get("summary") as string,
+    content: formData.get("content") as string,
+    status: (formData.get("status") as any) || existing.status,
+    categoryId: (formData.get("categoryId") as string) || null,
+  };
+
+  const parsed = newsSchema.partial().safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const title = parsed.data.title;
+  const summary = parsed.data.summary;
+  const content = parsed.data.content;
+  const status = parsed.data.status || existing.status;
+  const categoryId = parsed.data.categoryId || null;
 
   let coverImage = existing.coverImage;
   const file = formData.get("coverImage") as File | null;
@@ -273,11 +305,24 @@ export async function updateArticleAction(id: string, formData: FormData) {
     return { success: false, error: "Artikel tidak ditemukan." };
   }
 
-  const title = formData.get("title") as string;
-  const summary = formData.get("summary") as string;
-  const content = formData.get("content") as string;
-  const status = (formData.get("status") as any) || existing.status;
-  const categoryId = (formData.get("categoryId") as string) || null;
+  const raw = {
+    title: formData.get("title") as string,
+    summary: formData.get("summary") as string,
+    content: formData.get("content") as string,
+    status: (formData.get("status") as any) || existing.status,
+    categoryId: (formData.get("categoryId") as string) || null,
+  };
+
+  const parsed = articleSchema.partial().safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const title = parsed.data.title;
+  const summary = parsed.data.summary;
+  const content = parsed.data.content;
+  const status = parsed.data.status || existing.status;
+  const categoryId = parsed.data.categoryId || null;
 
   let coverImage = existing.coverImage;
   const file = formData.get("coverImage") as File | null;

@@ -190,7 +190,12 @@ export function wrapNativeEngineInstance(nativeEngine: any) {
 
 const prismaClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL || "";
-  const pool = new (Pool as any)({ connectionString }) as Pool;
+  const pool = new (Pool as any)({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  }) as Pool;
   pool.on("error", (err: any) => {
     // Gracefully handle idle connection drop without crashing the process
     console.warn("Neon pool idle connection warning:", err?.message);

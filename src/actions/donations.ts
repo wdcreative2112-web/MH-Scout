@@ -232,44 +232,63 @@ export async function saveAccountAction(formData: FormData) {
     const bankName = (formData.get("bankName") as string)?.trim();
     let accountNumber = (formData.get("accountNumber") as string)?.trim() || "";
     const accountHolder = (formData.get("accountHolder") as string)?.trim();
-    const description = (formData.get("description") as string) || null;
+    const description = (formData.get("description") as string)?.trim() || null;
     const isActive = formData.has("isActiveSubmitted")
       ? formData.get("isActive") === "true" || formData.get("isActive") === "on" || formData.get("isActive") === "1"
       : formData.get("isActive") !== "false";
     const sortOrder = parseInt((formData.get("sortOrder") as string) || "1", 10);
 
-    if (!bankName || !accountHolder) {
-      return { success: false, error: "Nama bank / saluran pembayaran dan nama pemilik rekening wajib diisi." };
+    if (!bankName || bankName.length < 2) {
+      return { success: false, error: "Nama bank / saluran pembayaran wajib diisi minimal 2 karakter." };
+    }
+    if (!accountHolder || accountHolder.length < 2) {
+      return { success: false, error: "Nama pemilik rekening (atas nama) wajib diisi minimal 2 karakter." };
     }
 
-    // Jika nomor rekening dikosongkan (khusus kanal QRIS), tetapkan default "QRIS"
-    if (!accountNumber) {
+    // Deteksi kanal apakah berupa QRIS atau Rekening Bank
+    const isQrisChannel =
+      bankName.toLowerCase().includes("qris") ||
+      accountNumber.toUpperCase() === "QRIS";
+
+    if (isQrisChannel) {
+      // Kanal QRIS tidak membutuhkan nomor rekening numerik
       accountNumber = "QRIS";
+    } else {
+      // Validasi nomor rekening bank: harus berupa 5-25 digit angka
+      const cleanDigits = accountNumber.replace(/[\s-]/g, "");
+      if (!cleanDigits || !/^\d{5,25}$/.test(cleanDigits)) {
+        return {
+          success: false,
+          error: "Nomor rekening bank tidak valid. Harap masukkan 5 sampai 25 digit angka tanpa huruf.",
+        };
+      }
+      accountNumber = cleanDigits;
     }
 
-    // Penanganan QR Image: mendukung upload file atau input tautan URL langsung
-    let qrImageUrl = (formData.get("existingQrImageUrl") as string) || null;
-    if (formData.get("removeQrImage") === "true") {
-      qrImageUrl = null;
-    }
-    const directQrUrl = (formData.get("qrImageUrl") as string)?.trim();
-    if (directQrUrl) {
-      qrImageUrl = directQrUrl;
-    }
-
+    // Penanganan QRIS Barcode: Wajib berasal dari berkas yang diunggah oleh admin
+    let qrImageUrl: string | null = null;
+    const removeRequested = formData.get("removeQrImage") === "true";
     const qrFile = formData.get("qrImage") as File | null;
+
     if (qrFile && qrFile.size > 0 && qrFile.name) {
       try {
         const uploadRes = await uploadImage(qrFile);
         qrImageUrl = uploadRes.url;
       } catch (err: any) {
-        console.warn("QRIS image upload failed:", err?.message);
-        if (!qrImageUrl) {
-          return {
-            success: false,
-            error: `Gagal memproses berkas QRIS: ${err?.message || "Format atau ukuran berkas tidak didukung"}`,
-          };
-        }
+        return {
+          success: false,
+          error: `Gagal mengunggah berkas QRIS: ${err?.message || "Format atau ukuran berkas tidak didukung"}`,
+        };
+      }
+    } else if (removeRequested) {
+      qrImageUrl = null;
+    } else {
+      // Gunakan berkas QRIS yang sudah ada jika tidak diubah, bersihkan jika URL generator dummy
+      const existing = (formData.get("existingQrImageUrl") as string)?.trim() || null;
+      if (existing && !existing.includes("api.qrserver.com")) {
+        qrImageUrl = existing;
+      } else {
+        qrImageUrl = null;
       }
     }
 

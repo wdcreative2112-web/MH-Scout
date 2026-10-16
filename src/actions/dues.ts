@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
-import { duesTypeSchema } from "@/lib/validations/finance";
+import { duesTypeSchema, memberDuesPaymentSchema } from "@/lib/validations/finance";
 
 export async function createDuesTypeAction(formData: FormData) {
   const session = await requireAuth();
@@ -93,57 +93,92 @@ export async function generateMemberDuesBillAction(duesTypeId: string, periodNam
   }
 }
 
+
 export async function payMemberDuesAction(memberDuesId: string, amountPaid: number, notes?: string) {
   const session = await requireAuth();
   if (session.role !== "ADMIN" && session.role !== "BENDAHARA") {
-    return { success: false, error: "Akses ditolak." };
+    return { success: false, error: "Akses ditolak: Hanya Bendahara dan Admin yang dapat mencatat pembayaran iuran." };
   }
 
+  const validation = memberDuesPaymentSchema.safeParse({
+    memberDuesId,
+    amountPaid,
+    notes,
+  });
+
+  if (!validation.success) {
+    return {
+      success: false,
+      error: validation.error.errors[0]?.message || "Nominal pembayaran tidak valid",
+    };
+  }
+
+  const validAmount = validation.data.amountPaid;
+
   try {
-    const dues = await prisma.memberDues.findUnique({
-      where: { id: memberDuesId },
-      include: { duesType: true, member: true },
-    });
-    if (!dues) return { success: false, error: "Tagihan tidak ditemukan." };
+    await prisma.$transaction(async (tx: any) => {
+      const dues = await tx.memberDues.findUnique({
+        where: { id: memberDuesId },
+        include: { duesType: true, member: true },
+      });
+      if (!dues) {
+        throw new Error("Tagihan iuran tidak ditemukan.");
+      }
 
-    const totalPaid = Number(dues.amountPaid) + amountPaid;
-    const isLunas = totalPaid >= Number(dues.amount);
+      const totalPaid = Number(dues.amountPaid) + validAmount;
+      const isLunas = totalPaid >= Number(dues.amount);
 
-    await prisma.memberDues.update({
-      where: { id: memberDuesId },
-      data: {
-        amountPaid: totalPaid,
-        status: isLunas ? "LUNAS" : "SEBAGIAN",
-        paidAt: new Date(),
-        notes: notes || dues.notes,
-      },
-    });
+      await tx.memberDues.update({
+        where: { id: memberDuesId },
+        data: {
+          amountPaid: totalPaid,
+          status: isLunas ? "LUNAS" : "SEBAGIAN",
+          paidAt: new Date(),
+          notes: notes || dues.notes,
+        },
+      });
 
-    // Also auto-record a financial transaction into Kas
-    const category = await prisma.financeCategory.findFirst({
-      where: { name: { contains: "Iuran", mode: "insensitive" } },
-    });
+      // Cari atau buat kategori kas iuran untuk konsistensi buku besar
+      let category = await tx.financeCategory.findFirst({
+        where: { name: { contains: "Iuran", mode: "insensitive" } },
+      });
 
-    if (category) {
-      await prisma.financialTransaction.create({
+      if (!category) {
+        category = await tx.financeCategory.findFirst({
+          where: { type: "PEMASUKAN" },
+        });
+      }
+
+      if (!category) {
+        category = await tx.financeCategory.create({
+          data: {
+            name: "Iuran Anggota",
+            type: "PEMASUKAN",
+            description: "Kategori kas otomatis untuk setoran iuran anggota",
+          },
+        });
+      }
+
+      await tx.financialTransaction.create({
         data: {
           date: new Date(),
           type: "PEMASUKAN",
           categoryId: category.id,
-          amount: amountPaid,
+          amount: validAmount,
           title: `Pembayaran ${dues.duesType.name} - ${dues.member.fullName} (${dues.periodName})`,
           sourceOrRecipient: dues.member.fullName,
-          description: `Setoran iuran ${dues.periodName}`,
+          description: `Setoran iuran ${dues.periodName}${notes ? ` - ${notes}` : ""}`,
           createdById: session.id,
         },
       });
-    }
+    });
 
     revalidatePath("/dashboard/dues");
     revalidatePath("/dashboard/finance");
     return { success: true };
-  } catch {
-    return { success: false, error: "Gagal mencatat pembayaran iuran." };
+  } catch (err: any) {
+    console.error("Gagal mencatat pembayaran iuran:", err?.message || err);
+    return { success: false, error: err?.message || "Gagal mencatat pembayaran iuran." };
   }
 }
 

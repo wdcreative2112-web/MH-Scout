@@ -34,14 +34,20 @@ const DEFAULT_CONFIG: RoutineScheduleConfig = {
   isActive: true,
 };
 
+let _cachedScheduleConfig: RoutineScheduleConfig | null = null;
+
 export async function getRoutineScheduleConfig(): Promise<RoutineScheduleConfig> {
+  if (_cachedScheduleConfig) {
+    return _cachedScheduleConfig;
+  }
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-      return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+      _cachedScheduleConfig = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+      return _cachedScheduleConfig;
     }
   } catch (err) {
-    console.error("Error reading routine schedule config:", err);
+    console.warn("Notice: could not read routine schedule from file, using fallback:", err);
   }
   return DEFAULT_CONFIG;
 }
@@ -60,6 +66,8 @@ export async function saveRoutineScheduleConfig(
     dayName,
   };
 
+  _cachedScheduleConfig = updated;
+
   try {
     const dir = path.dirname(CONFIG_PATH);
     if (!fs.existsSync(dir)) {
@@ -67,7 +75,7 @@ export async function saveRoutineScheduleConfig(
     }
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(updated, null, 2), "utf-8");
   } catch (err) {
-    console.error("Error writing routine schedule config:", err);
+    console.warn("Notice: file system is read-only or could not write schedule config. Using in-memory configuration.");
   }
 
   return updated;

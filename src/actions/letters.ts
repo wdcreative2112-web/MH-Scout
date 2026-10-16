@@ -147,6 +147,28 @@ export async function deleteLetterAction(id: string) {
 export async function createPermitLetterAction(formData: FormData) {
   const session = await requireAuth();
 
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS" && session.role !== "KETUA_REGU") {
+    return { success: false, error: "Akses ditolak: Anda tidak memiliki wewenang mengelola surat izin." };
+  }
+
+  const memberId = (formData.get("memberId") as string) || "";
+
+  // Jika KETUA_REGU, verifikasi bahwa anggota termasuk dalam regunya
+  if (session.role === "KETUA_REGU") {
+    if (!session.groupId) {
+      return { success: false, error: "Akses ditolak: Akun Ketua Regu belum terhubung ke regu manapun." };
+    }
+    if (memberId) {
+      const member = await prisma.member.findUnique({
+        where: { id: memberId },
+        select: { groupId: true },
+      });
+      if (!member || member.groupId !== session.groupId) {
+        return { success: false, error: "Akses ditolak: Anda hanya dapat membuat surat izin untuk anggota regu Anda." };
+      }
+    }
+  }
+
   const letterNumber = (formData.get("letterNumber") as string)?.trim();
   const dateStr = (formData.get("date") as string) || new Date().toISOString();
   const memberName = (formData.get("memberName") as string)?.trim();
@@ -236,6 +258,10 @@ export async function createPermitLetterAction(formData: FormData) {
 
 export async function updatePermitLetterAction(id: string, formData: FormData) {
   const session = await requireAuth();
+
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak: Hanya Admin dan Sekretaris yang dapat memperbarui surat izin." };
+  }
 
   const letterNumber = (formData.get("letterNumber") as string)?.trim();
   const dateStr = (formData.get("date") as string) || new Date().toISOString();

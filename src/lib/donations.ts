@@ -50,8 +50,8 @@ const DEFAULT_ACCOUNTS: DonationAccount[] = [
     bankName: "QRIS Nasional (Semua Bank & E-Wallet)",
     accountNumber: "QRIS",
     accountHolder: "PRAMUKA MH SCOUT RESMI",
-    qrImageUrl: "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=00020101021126590014ID.GO.PRAMUKA011893600918000000000002030000303UME51440014ID.LINKAJA.WWW02159360091800000005204581453033605802ID5916PRAMUKA+MH+SCOUT6007JAKARTA61051234062070703A016304B184",
-    description: "Scan langsung menggunakan GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
+    qrImageUrl: null,
+    description: "Scan barcode QRIS resmi yang diunggah oleh admin pangkalan untuk pembayaran via GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
     isActive: true,
     sortOrder: 4,
   },
@@ -581,6 +581,24 @@ export async function rejectDonation(
 // Helper aman untuk Prisma delegate donationAccount (fleksibel jika prisma client belum dire-generate)
 const getPrismaAccount = () => (prisma as any)?.donationAccount;
 
+export function normalizeAccountRecord(a: any): DonationAccount {
+  let qr = a.qrImageUrl || null;
+  // Pastikan URL generator palsu/dummy api.qrserver.com dibersihkan sepenuhnya
+  if (typeof qr === "string" && qr.includes("api.qrserver.com")) {
+    qr = null;
+  }
+  return {
+    id: a.id,
+    bankName: a.bankName,
+    accountNumber: a.accountNumber,
+    accountHolder: a.accountHolder,
+    qrImageUrl: qr,
+    description: a.description || null,
+    isActive: a.isActive ?? true,
+    sortOrder: typeof a.sortOrder === "number" ? a.sortOrder : 0,
+  };
+}
+
 export async function getDonationAccounts(): Promise<DonationAccount[]> {
   try {
     const delegate = getPrismaAccount();
@@ -590,16 +608,7 @@ export async function getDonationAccounts(): Promise<DonationAccount[]> {
         orderBy: { sortOrder: "asc" },
       });
       if (dbAccounts && dbAccounts.length > 0) {
-        return dbAccounts.map((a: any) => ({
-          id: a.id,
-          bankName: a.bankName,
-          accountNumber: a.accountNumber,
-          accountHolder: a.accountHolder,
-          qrImageUrl: a.qrImageUrl,
-          description: a.description,
-          isActive: a.isActive,
-          sortOrder: a.sortOrder,
-        }));
+        return dbAccounts.map(normalizeAccountRecord);
       }
     }
   } catch {
@@ -608,6 +617,7 @@ export async function getDonationAccounts(): Promise<DonationAccount[]> {
 
   const store = loadStore();
   return store.accounts
+    .map(normalizeAccountRecord)
     .filter((a) => a.isActive)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -620,16 +630,7 @@ export async function getAllDonationAccountsAdmin(): Promise<DonationAccount[]> 
         orderBy: { sortOrder: "asc" },
       });
       if (dbAccounts && dbAccounts.length > 0) {
-        return dbAccounts.map((a: any) => ({
-          id: a.id,
-          bankName: a.bankName,
-          accountNumber: a.accountNumber,
-          accountHolder: a.accountHolder,
-          qrImageUrl: a.qrImageUrl,
-          description: a.description,
-          isActive: a.isActive,
-          sortOrder: a.sortOrder,
-        }));
+        return dbAccounts.map(normalizeAccountRecord);
       }
     }
   } catch {
@@ -637,7 +638,7 @@ export async function getAllDonationAccountsAdmin(): Promise<DonationAccount[]> 
   }
 
   const store = loadStore();
-  return store.accounts.sort((a, b) => a.sortOrder - b.sortOrder);
+  return store.accounts.map(normalizeAccountRecord).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export async function saveDonationAccount(

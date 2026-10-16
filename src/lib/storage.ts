@@ -11,14 +11,61 @@ export interface UploadResult {
 }
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-export function validateImage(file: { type: string; size: number }): { valid: boolean; error?: string } {
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+export function resolveImageMimeType(type?: string, fileName?: string): string | null {
+  const normalized = (type || "").toLowerCase().trim();
+  if (normalized === "image/jpeg" || normalized === "image/jpg" || normalized === "image/pjpeg") {
+    return "image/jpeg";
+  }
+  if (normalized === "image/png" || normalized === "image/x-png") {
+    return "image/png";
+  }
+  if (normalized === "image/webp") {
+    return "image/webp";
+  }
+  if (normalized === "image/gif") {
+    return "image/gif";
+  }
+
+  if (fileName) {
+    const ext = path.extname(fileName).toLowerCase();
+    if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+    if (ext === ".png") return "image/png";
+    if (ext === ".webp") return "image/webp";
+    if (ext === ".gif") return "image/gif";
+  }
+
+  return null;
+}
+
+export function validateImage(file: { type: string; size: number; name?: string }): { valid: boolean; error?: string } {
+  const resolvedMime = resolveImageMimeType(file.type, file.name);
+  if (!resolvedMime) {
     return {
       valid: false,
-      error: "Format file tidak didukung. Gunakan format JPG, PNG, WEBP, atau GIF.",
+      error: "Format berkas tidak didukung. Harap unggah gambar format JPG, PNG, WEBP, atau GIF.",
     };
+  }
+
+  if (file.name) {
+    const rawExt = path.extname(file.name).toLowerCase();
+    const dangerousExts = [
+      ".html", ".htm", ".svg", ".php", ".phtml", ".shtml", ".js", 
+      ".jsx", ".ts", ".tsx", ".sh", ".bash", ".exe", ".cmd", ".bat", ".vbs"
+    ];
+    if (dangerousExts.includes(rawExt)) {
+      return {
+        valid: false,
+        error: "Ekstensi file berisiko tidak diizinkan untuk diunggah.",
+      };
+    }
   }
 
   if (file.size > MAX_FILE_SIZE) {
@@ -198,19 +245,20 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Generate nama unik untuk berkas
-  const ext = path.extname(file.name) || ".jpg";
-  const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
+  // Generate nama unik untuk berkas dengan ekstensi aman berbasis MIME type
+  const resolvedMime = resolveImageMimeType(file.type, file.name) || "image/jpeg";
+  const safeExt = MIME_TO_EXT[resolvedMime] || ".jpg";
+  const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${safeExt}`;
 
   // 1. Opsi Utama: Neon S3 Object Storage (Native, Zero Dependency)
   if (isNeonStorageConfigured()) {
     try {
-      const publicUrl = await uploadToNeonS3Native(buffer, `uploads/${uniqueName}`, file.type);
+      const publicUrl = await uploadToNeonS3Native(buffer, `uploads/${uniqueName}`, resolvedMime);
       return {
         url: publicUrl,
         fileName: uniqueName,
         originalName: file.name,
-        mimeType: file.type,
+        mimeType: resolvedMime,
         size: file.size,
       };
     } catch (err: any) {

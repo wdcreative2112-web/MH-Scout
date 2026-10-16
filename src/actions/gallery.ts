@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { slugify } from "@/lib/utils";
 import { uploadImage } from "@/lib/storage";
+import { galleryAlbumSchema } from "@/lib/validations/content";
 
 export async function createAlbumAction(formData: FormData) {
   const session = await requireAuth();
@@ -12,10 +13,19 @@ export async function createAlbumAction(formData: FormData) {
     return { success: false, error: "Akses ditolak." };
   }
 
-  const title = formData.get("title") as string;
-  const description = (formData.get("description") as string) || null;
-  const eventDate = formData.get("eventDate") as string;
-  const isPublished = formData.get("isPublished") === "true";
+  const raw = {
+    title: formData.get("title") as string,
+    description: (formData.get("description") as string) || null,
+    eventDate: (formData.get("eventDate") as string) || null,
+    isPublished: formData.get("isPublished") === "true",
+  };
+
+  const parsed = galleryAlbumSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const { title, description, eventDate, isPublished } = parsed.data;
 
   let coverImage: string | null = null;
   const file = formData.get("coverImage") as File | null;
@@ -95,10 +105,22 @@ export async function updateAlbumAction(id: string, formData: FormData) {
     return { success: false, error: "Album tidak ditemukan." };
   }
 
-  const title = formData.get("title") as string;
-  const description = (formData.get("description") as string) || null;
-  const eventDate = formData.get("eventDate") as string;
-  const isPublished = formData.get("isPublished") === "true";
+  const raw = {
+    title: (formData.get("title") as string) || existing.title,
+    description: (formData.get("description") as string) || null,
+    eventDate: (formData.get("eventDate") as string) || null,
+    isPublished: formData.get("isPublished") === "true",
+  };
+
+  const parsed = galleryAlbumSchema.partial().safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message };
+  }
+
+  const title = parsed.data.title || existing.title;
+  const description = parsed.data.description !== undefined ? parsed.data.description : existing.description;
+  const eventDate = parsed.data.eventDate !== undefined ? parsed.data.eventDate : existing.eventDate;
+  const isPublished = parsed.data.isPublished !== undefined ? parsed.data.isPublished : existing.isPublished;
 
   let coverImage = existing.coverImage;
   const file = formData.get("coverImage") as File | null;

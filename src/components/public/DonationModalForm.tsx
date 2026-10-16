@@ -346,7 +346,7 @@ export function DonationModalForm({
                   onClick={() => {
                     setPaymentMethod("QRIS");
                     const qrisAcc =
-                      accounts.find((a) => a.bankName.toLowerCase().includes("qris") && a.qrImageUrl) ||
+                      accounts.find((a) => a.bankName.toLowerCase().includes("qris") || a.accountNumber === "QRIS") ||
                       accounts.find((a) => a.qrImageUrl);
                     if (qrisAcc) {
                       setSelectedAccountId(qrisAcc.id);
@@ -366,7 +366,7 @@ export function DonationModalForm({
               {/* Account Selector Card */}
               {accounts.length > 0 && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-200/80 space-y-3">
-                  {/* Mode QRIS: Tidak perlu nomor rekening, cukup gambar QRIS & tombol unduh */}
+                  {/* Mode QRIS: Menampilkan berkas QRIS resmi yang diunggah oleh admin */}
                   {paymentMethod === "QRIS" ? (
                     currentAccount?.qrImageUrl ? (
                       <div className="pt-1 text-center animate-in fade-in space-y-3">
@@ -402,24 +402,24 @@ export function DonationModalForm({
                         </div>
                       </div>
                     ) : (
-                      <div className="pt-2 text-center p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                        <p className="text-xs font-bold text-amber-800">
-                          Barcode QRIS belum terpasang.
+                      <div className="pt-2 text-center p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+                        <p className="text-xs font-bold text-amber-900">
+                          Barcode QRIS Resmi Sedang Disiapkan
                         </p>
-                        {accounts.find((a) => a.qrImageUrl) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const accWithQr =
-                                accounts.find((a) => a.bankName.toLowerCase().includes("qris") && a.qrImageUrl) ||
-                                accounts.find((a) => a.qrImageUrl);
-                              if (accWithQr) setSelectedAccountId(accWithQr.id);
-                            }}
-                            className="mt-1.5 text-xs font-bold text-emerald-800 underline hover:text-emerald-900 inline-block"
-                          >
-                            Beralih ke QRIS aktif →
-                          </button>
-                        )}
+                        <p className="text-[11px] text-amber-800 leading-relaxed max-w-sm mx-auto">
+                          Pengurus gugus depan sedang memperbarui berkas QRIS resmi pangkalan. Silakan gunakan metode Transfer Bank untuk melanjutkan transfer donasi.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentMethod("TRANSFER_BANK");
+                            const firstBank = accounts.find((a) => !a.bankName.toLowerCase().includes("qris"));
+                            if (firstBank) setSelectedAccountId(firstBank.id);
+                          }}
+                          className="mt-1 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 shadow-2xs transition-all cursor-pointer"
+                        >
+                          Beralih ke Transfer Bank →
+                        </button>
                       </div>
                     )
                   ) : (
@@ -435,7 +435,7 @@ export function DonationModalForm({
                           className="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs font-semibold bg-white text-slate-800"
                         >
                           {accounts
-                            .filter((acc) => !acc.bankName.toLowerCase().includes("qris"))
+                            .filter((acc) => !acc.bankName.toLowerCase().includes("qris") && acc.accountNumber !== "QRIS")
                             .map((acc) => (
                               <option key={acc.id} value={acc.id}>
                                 {acc.bankName} - {acc.accountHolder}
@@ -460,7 +460,7 @@ export function DonationModalForm({
 
                           <div className="shrink-0">
                             <CopyButton
-                              textToCopy={currentAccount.accountNumber}
+                              textToCopy={currentAccount.accountNumber.replace(/[\s-]/g, "")}
                               label="Salin Rekening"
                             />
                           </div>

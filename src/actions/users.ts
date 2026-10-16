@@ -186,6 +186,7 @@ export async function deleteUserAction(userId: string) {
         _count: {
           select: {
             transactions: true,
+            attendanceAudits: true,
           },
         },
       },
@@ -199,6 +200,13 @@ export async function deleteUserAction(userId: string) {
       return {
         success: false,
         error: `Akun ${targetUser.name} telah mencatat ${targetUser._count.transactions} transaksi kas pangkalan. Demi integritas audit keuangan, akun tidak dapat dihapus. Silakan nonaktifkan akun sebagai alternatif.`,
+      };
+    }
+
+    if (targetUser._count.attendanceAudits > 0) {
+      return {
+        success: false,
+        error: `Akun ${targetUser.name} memiliki ${targetUser._count.attendanceAudits} rekam jejak audit presensi. Demi integritas riwayat kehadiran, akun tidak dapat dihapus. Silakan nonaktifkan status akun sebagai alternatif.`,
       };
     }
 

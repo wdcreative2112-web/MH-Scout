@@ -702,25 +702,40 @@ export function DonationsClientView({
                     <p className="text-xs text-slate-500">{acc.description}</p>
                   )}
 
-                  {acc.qrImageUrl && (
+                  {acc.qrImageUrl ? (
                     <div className="pt-2 text-center space-y-2">
                       <img
                         src={acc.qrImageUrl}
                         alt="QRIS"
                         className="w-28 h-28 object-contain mx-auto rounded-lg border border-slate-200 bg-white"
                       />
-                      <a
-                        href={acc.qrImageUrl}
-                        download={`${acc.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
-                      >
-                        <Download className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Unduh Barcode</span>
-                      </a>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                          ✓ Berkas QRIS Terunggah
+                        </span>
+                        <a
+                          href={acc.qrImageUrl}
+                          download={`${acc.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                        >
+                          <Download className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Unduh</span>
+                        </a>
+                      </div>
                     </div>
-                  )}
+                  ) : (acc.bankName.toLowerCase().includes("qris") || acc.accountNumber === "QRIS") ? (
+                    <div className="pt-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-center space-y-1">
+                      <div className="flex items-center justify-center gap-1 text-amber-900 text-xs font-bold">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Barcode QRIS Belum Diunggah</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 leading-snug">
+                        Klik tombol <strong>Edit</strong> di bawah untuk mengunggah file gambar QRIS resmi pangkalan.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
@@ -728,8 +743,12 @@ export function DonationsClientView({
                     type="button"
                     onClick={() => {
                       setEditingAccount(acc);
-                      setAccountQrPreview(acc.qrImageUrl || null);
-                      setAccountQrUrlInput(acc.qrImageUrl || "");
+                      const cleanQr =
+                        acc.qrImageUrl && !acc.qrImageUrl.includes("api.qrserver.com")
+                          ? acc.qrImageUrl
+                          : null;
+                      setAccountQrPreview(cleanQr);
+                      setAccountQrUrlInput("");
                       setRemoveQrImage(false);
                       setAccountModalOpen(true);
                     }}
@@ -1075,9 +1094,12 @@ export function DonationsClientView({
                     type="text"
                     name="accountNumber"
                     defaultValue={editingAccount?.accountNumber === "QRIS" ? "" : (editingAccount?.accountNumber || "")}
-                    placeholder="Kosongkan jika QRIS / Contoh: 7198234501"
+                    placeholder="Contoh: 7198234501 (hanya angka)"
                     className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden font-mono"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Wajib 5–25 digit angka untuk rekening bank (BSI, BCA, Mandiri, dll). Biarkan kosong jika kanal QRIS.
+                  </p>
                 </div>
 
                 <div>
@@ -1092,6 +1114,9 @@ export function DonationsClientView({
                     placeholder="Contoh: PRAMUKA MH SCOUT"
                     className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Nama pemilik rekening atau merchant resmi QRIS.
+                  </p>
                 </div>
               </div>
 
@@ -1108,12 +1133,12 @@ export function DonationsClientView({
                 />
               </div>
 
-              {/* QRIS BARCODE UPLOAD & URL SECTION */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              {/* QRIS BARCODE UPLOAD SECTION - STRICTLY FILE BASED */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <QrCode className="w-4 h-4 text-emerald-700" />
-                    <span>Gambar Barcode QRIS</span>
+                    <span>Upload Berkas Barcode QRIS</span>
                   </label>
                   {accountQrPreview && !removeQrImage && (
                     <button
@@ -1121,7 +1146,6 @@ export function DonationsClientView({
                       onClick={() => {
                         setRemoveQrImage(true);
                         setAccountQrPreview(null);
-                        setAccountQrUrlInput("");
                       }}
                       className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline"
                     >
@@ -1130,63 +1154,71 @@ export function DonationsClientView({
                   )}
                 </div>
 
-                {/* Live Preview If Available */}
+                {/* Pratinjau Barcode Terpasang atau Berkas Baru yang Dipilih */}
                 {accountQrPreview && !removeQrImage ? (
-                  <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-emerald-200">
+                  <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-emerald-300 shadow-2xs">
                     <img
                       src={accountQrPreview}
                       alt="Pratinjau QRIS"
-                      className="w-20 h-20 object-contain rounded-lg border border-slate-200 shrink-0 bg-white"
+                      className="w-24 h-24 object-contain rounded-lg border border-slate-200 shrink-0 bg-white"
                     />
-                    <div className="space-y-1 text-xs">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Barcode Terpasang
+                    <div className="space-y-1.5 text-xs">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        ✓ Berkas QRIS Terpasang
                       </span>
-                      <p className="text-slate-600 text-[11px]">
-                        Gambar ini akan muncul di halaman donasi dan popup pembayaran donatur.
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Barcode ini akan langsung muncul di halaman donasi publik dan popup pembayaran donatur.
                       </p>
+                      <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Pilih berkas lain untuk mengganti</span>
+                        <input
+                          type="file"
+                          name="qrImage"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              setAccountQrPreview(URL.createObjectURL(f));
+                              setRemoveQrImage(false);
+                            }
+                          }}
+                        />
+                      </label>
                     </div>
                   </div>
-                ) : null}
-
-                {/* Upload File Input */}
-                <div>
-                  <span className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Upload Berkas Gambar (JPG, PNG, WEBP):
-                  </span>
-                  <input
-                    type="file"
-                    name="qrImage"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        setAccountQrPreview(URL.createObjectURL(f));
-                        setRemoveQrImage(false);
-                      }
-                    }}
-                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                </div>
-
-                {/* Or Direct URL Input */}
-                <div>
-                  <span className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Atau Masukkan Tautan / URL Gambar QRIS:
-                  </span>
-                  <input
-                    type="text"
-                    name="qrImageUrl"
-                    value={accountQrUrlInput}
-                    onChange={(e) => {
-                      setAccountQrUrlInput(e.target.value);
-                      setAccountQrPreview(e.target.value || null);
-                      setRemoveQrImage(false);
-                    }}
-                    placeholder="https://... atau /uploads/qr.png"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden bg-white"
-                  />
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-4 text-center transition-colors bg-white">
+                      <Upload className="w-7 h-7 text-emerald-600 mx-auto mb-1.5" />
+                      <p className="text-xs font-bold text-slate-800">
+                        Pilih file gambar QRIS resmi dari perangkat Anda
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Format didukung: PNG, JPG, JPEG, WEBP (Maksimal 10 MB)
+                      </p>
+                      <div className="mt-3">
+                        <input
+                          type="file"
+                          name="qrImage"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              setAccountQrPreview(URL.createObjectURL(f));
+                              setRemoveQrImage(false);
+                            }
+                          }}
+                          className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      * Barcode wajib berasal dari berkas asli resmi yang diunggah oleh user admin (bukan tautan URL eksternal generator dummy).
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Status Aktif Checkbox */}

@@ -409,7 +409,7 @@ export async function saveBatchAttendanceAction(data: {
         });
 
         if (existing) {
-          // Record audit log if status changed
+          // Record audit log if status changed or notes updated
           if (existing.status !== rec.status) {
             await tx.attendanceAuditLog.create({
               data: {
@@ -441,7 +441,26 @@ export async function saveBatchAttendanceAction(data: {
               recordedById: session.id,
             },
           });
+
+          await tx.attendanceAuditLog.create({
+            data: {
+              meetingId,
+              memberId: rec.memberId,
+              previousStatus: "BELUM_DIISI",
+              newStatus: rec.status,
+              changedById: session.id,
+              reason: rec.notes || "Pengisian absensi awal",
+            },
+          });
         }
+      }
+
+      // Update status pertemuan menjadi SELESAI jika sebelumnya masih TERJADWAL
+      if (meeting.status === "TERJADWAL") {
+        await tx.attendanceMeeting.update({
+          where: { id: meetingId },
+          data: { status: "SELESAI" },
+        });
       }
     });
 

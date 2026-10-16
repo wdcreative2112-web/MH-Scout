@@ -299,31 +299,40 @@ export function DonationClientView({
                           {acc.description || (isQris ? "QRIS Standar Nasional" : "Rekening donasi pangkalan")}
                         </p>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {acc.qrImageUrl ? (
-                            <>
-                              <a
-                                href={acc.qrImageUrl}
-                                download="QRIS-PRAMUKA-MH-SCOUT.png"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white glossy-button-primary transition-all shadow-2xs active:scale-95"
-                                title="Unduh Barcode QRIS"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                <span>Unduh</span>
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => setZoomQrAccount(acc)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
-                                title="Perbesar Barcode"
-                              >
-                                <QrCode className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>Lihat</span>
-                              </button>
-                            </>
+                          {isQris ? (
+                            acc.qrImageUrl ? (
+                              <>
+                                <a
+                                  href={acc.qrImageUrl}
+                                  download="QRIS-PRAMUKA-MH-SCOUT.png"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white glossy-button-primary transition-all shadow-2xs active:scale-95"
+                                  title="Unduh Barcode QRIS"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Unduh</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => setZoomQrAccount(acc)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                                  title="Perbesar Barcode"
+                                >
+                                  <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>Lihat</span>
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 font-semibold">
+                                Barcode Disiapkan
+                              </span>
+                            )
                           ) : (
-                            <CopyButton textToCopy={acc.accountNumber} label="Salin" />
+                            <CopyButton
+                              textToCopy={acc.accountNumber.replace(/[\s-]/g, "")}
+                              label="Salin"
+                            />
                           )}
                         </div>
                       </div>
@@ -333,43 +342,60 @@ export function DonationClientView({
               </div>
 
               {/* QRIS Card Feature */}
-              {qrisAccount && qrisAccount.qrImageUrl && (
-                <div className="md:col-span-4 rounded-2xl p-5 bg-gradient-to-br from-emerald-950 to-scout-900 text-white text-center border border-emerald-500/20 shadow-md space-y-3">
-                  <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 uppercase tracking-wider">
-                    <QrCode className="w-4 h-4" />
-                    <span>Scan QRIS Langsung</span>
-                  </div>
-                  <div
-                    onClick={() => setZoomQrAccount(qrisAccount)}
-                    className="bg-white p-3 rounded-2xl shadow-inner cursor-pointer hover:scale-102 transition-transform inline-block group"
-                    title="Klik untuk memperbesar QRIS"
-                  >
-                    <img
-                      src={qrisAccount.qrImageUrl}
-                      alt={qrisAccount.bankName}
-                      className="w-40 h-40 object-contain mx-auto"
-                    />
-                    <span className="text-[10px] text-slate-500 font-medium group-hover:text-emerald-700 block mt-1">
-                      Klik untuk memperbesar
-                    </span>
-                  </div>
-                  
-                  <div className="pt-1 flex flex-col gap-2">
-                    <a
-                      href={qrisAccount.qrImageUrl}
-                      download="QRIS-PRAMUKA-MH-SCOUT.png"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-900 bg-amber-300 hover:bg-amber-200 shadow-md transition-all active:scale-95"
+              {qrisAccount && (
+                qrisAccount.qrImageUrl ? (
+                  <div className="md:col-span-4 rounded-2xl p-5 bg-gradient-to-br from-emerald-950 to-scout-900 text-white text-center border border-emerald-500/20 shadow-md space-y-3">
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                      <QrCode className="w-4 h-4" />
+                      <span>Scan QRIS Resmi</span>
+                    </div>
+                    <div
+                      onClick={() => setZoomQrAccount(qrisAccount)}
+                      className="bg-white p-3 rounded-2xl shadow-inner cursor-pointer hover:scale-102 transition-transform inline-block group"
+                      title="Klik untuk memperbesar QRIS"
                     >
-                      <Download className="w-4 h-4 text-slate-900" />
-                      <span>Unduh Barcode QRIS</span>
-                    </a>
-                    <p className="text-xs text-slate-300 leading-snug">
-                      Bisa di-scan langsung atau diunduh untuk bayar lewat mobile banking & e-wallet.
-                    </p>
+                      <img
+                        src={qrisAccount.qrImageUrl}
+                        alt={qrisAccount.bankName}
+                        className="w-40 h-40 object-contain mx-auto"
+                      />
+                      <span className="text-[10px] text-slate-500 font-medium group-hover:text-emerald-700 block mt-1">
+                        Klik untuk memperbesar
+                      </span>
+                    </div>
+                    
+                    <div className="pt-1 flex flex-col gap-2">
+                      <a
+                        href={qrisAccount.qrImageUrl}
+                        download="QRIS-PRAMUKA-MH-SCOUT.png"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-900 bg-amber-300 hover:bg-amber-200 shadow-md transition-all active:scale-95"
+                      >
+                        <Download className="w-4 h-4 text-slate-900" />
+                        <span>Unduh Barcode QRIS</span>
+                      </a>
+                      <p className="text-xs text-slate-300 leading-snug">
+                        Bisa di-scan langsung atau diunduh untuk bayar lewat mobile banking & e-wallet.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="md:col-span-4 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-emerald-950 text-white text-center border border-emerald-500/20 shadow-md space-y-3">
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                      <QrCode className="w-4 h-4" />
+                      <span>Kanal QRIS Pangkalan</span>
+                    </div>
+                    <div className="bg-white/10 p-5 rounded-2xl border border-white/10 space-y-2">
+                      <p className="text-xs font-bold text-slate-200">
+                        Barcode QRIS Sedang Disiapkan
+                      </p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Pengurus pangkalan sedang memperbarui berkas QRIS resmi. Anda dapat menyalurkan donasi via Transfer Bank di samping.
+                      </p>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>

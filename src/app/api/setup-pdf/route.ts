@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
 export async function GET() {
   try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Akses ditolak: Hanya Administrator yang dapat memicu setup PDF vendor." },
+        { status: 403 }
+      );
+    }
     const vendorDir = path.join(process.cwd(), "public", "vendor");
     if (!fs.existsSync(vendorDir)) {
       fs.mkdirSync(vendorDir, { recursive: true });
