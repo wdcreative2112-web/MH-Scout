@@ -20,6 +20,10 @@ export async function hashPassword(password: string): Promise<string> {
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   if (!password || !hash) return false;
+  // Fallback: Jika data diinput manual via SQL / Neon Console sebagai teks biasa (plain text)
+  if (password.trim() === hash.trim()) {
+    return true;
+  }
   try {
     return await bcrypt.compare(password, hash);
   } catch {

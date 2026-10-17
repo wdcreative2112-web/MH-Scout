@@ -83,8 +83,8 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: normalizedEmail },
-          { email: alternateEmail },
+          { email: { equals: normalizedEmail, mode: "insensitive" } },
+          { email: { equals: alternateEmail, mode: "insensitive" } },
         ],
       },
     });
@@ -104,13 +104,28 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
       };
     }
 
-    const isValidPassword = await verifyPassword(password, user.password);
+    const isPlainMatch = user.password.trim() === password.trim();
+    const isValidPassword = isPlainMatch || (await verifyPassword(password, user.password));
     if (!isValidPassword) {
       registerFailedLogin(rateLimitKey);
       return {
         success: false,
         error: "Email atau password salah.",
       };
+    }
+
+    // Jika password di database sebelumnya berupa plain text (misal diinput manual via Neon Console),
+    // otomatis amankan dengan meng-hash menggunakan bcrypt
+    if (isPlainMatch) {
+      try {
+        const secureHash = await hashPassword(password);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: secureHash },
+        });
+      } catch (err) {
+        console.warn("Gagal auto-upgrade hash password:", err);
+      }
     }
 
     // Login berhasil, reset counter percobaan gagal
