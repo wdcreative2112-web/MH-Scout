@@ -418,289 +418,293 @@ export function MembersClientView({
 
       {/* MODAL: Tambah / Edit Anggota */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingMember ? "Edit Data Anggota" : "Tambah Anggota Baru"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Nomor Anggota / NTA *
-                  </label>
-                  <input
-                    type="text"
-                    name="memberNumber"
-                    required
-                    defaultValue={editingMember?.memberNumber || ""}
-                    placeholder="Contoh: PRM-001"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Jenis Kelamin *
-                  </label>
-                  <select
-                    name="gender"
-                    required
-                    defaultValue={editingMember?.gender || "L"}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
-                  >
-                    <option value="L">Laki-laki (Putra)</option>
-                    <option value="P">Perempuan (Putri)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Nama Lengkap Anggota *
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  required
-                  defaultValue={editingMember?.fullName || ""}
-                  placeholder="Nama lengkap sesuai data resmi"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Tingkatan Pramuka *
-                  </label>
-                  <select
-                    name="scoutLevel"
-                    required
-                    defaultValue={editingMember?.scoutLevel || "Penggalang Ramu"}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
-                  >
-                    {SCOUT_LEVELS.map((lvl) => (
-                      <option key={lvl} value={lvl}>
-                        {lvl}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Regu / Sangga
-                  </label>
-                  <select
-                    name="groupId"
-                    defaultValue={editingMember?.groupId || ""}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
-                  >
-                    <option value="">(Belum ada regu)</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name} ({g.category})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Kelas / Tingkat Sekolah
-                  </label>
-                  <input
-                    type="text"
-                    name="classGrade"
-                    defaultValue={editingMember?.classGrade || ""}
-                    placeholder="Contoh: VII-A / X IPA 1"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Status Keanggotaan
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue={editingMember?.status || "AKTIF"}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
-                  >
-                    <option value="AKTIF">Aktif</option>
-                    <option value="NONAKTIF">Nonaktif</option>
-                    <option value="ALUMNI">Alumni</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    No. Telepon / WA Anggota
-                  </label>
-                  <input
-                    type="text"
-                    name="phone"
-                    defaultValue={editingMember?.phone || ""}
-                    placeholder="0812xxxxxxxx"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    No. Kontak Orang Tua / Wali
-                  </label>
-                  <input
-                    type="text"
-                    name="parentPhone"
-                    defaultValue={editingMember?.parentPhone || ""}
-                    placeholder="0813xxxxxxxx"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Catatan Administratif
-                </label>
-                <textarea
-                  name="notes"
-                  rows={2}
-                  defaultValue={editingMember?.notes || ""}
-                  placeholder="Riwayat kesehatan khusus, prestasi, dll."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">
+                  {editingMember ? "Edit Data Anggota" : "Tambah Anggota Baru"}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                 >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{editingMember ? "Simpan Perubahan" : "Tambah Anggota"}</span>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Nomor Anggota / NTA *
+                    </label>
+                    <input
+                      type="text"
+                      name="memberNumber"
+                      required
+                      defaultValue={editingMember?.memberNumber || ""}
+                      placeholder="Contoh: PRM-001"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Jenis Kelamin *
+                    </label>
+                    <select
+                      name="gender"
+                      required
+                      defaultValue={editingMember?.gender || "L"}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
+                    >
+                      <option value="L">Laki-laki (Putra)</option>
+                      <option value="P">Perempuan (Putri)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Nama Lengkap Anggota *
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    required
+                    defaultValue={editingMember?.fullName || ""}
+                    placeholder="Nama lengkap sesuai data resmi"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Tingkatan Pramuka *
+                    </label>
+                    <select
+                      name="scoutLevel"
+                      required
+                      defaultValue={editingMember?.scoutLevel || "Penggalang Ramu"}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
+                    >
+                      {SCOUT_LEVELS.map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          {lvl}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Regu / Sangga
+                    </label>
+                    <select
+                      name="groupId"
+                      defaultValue={editingMember?.groupId || ""}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
+                    >
+                      <option value="">(Belum ada regu)</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name} ({g.category})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Kelas / Tingkat Sekolah
+                    </label>
+                    <input
+                      type="text"
+                      name="classGrade"
+                      defaultValue={editingMember?.classGrade || ""}
+                      placeholder="Contoh: VII-A / X IPA 1"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Status Keanggotaan
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue={editingMember?.status || "AKTIF"}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white"
+                    >
+                      <option value="AKTIF">Aktif</option>
+                      <option value="NONAKTIF">Nonaktif</option>
+                      <option value="ALUMNI">Alumni</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      No. Telepon / WA Anggota
+                    </label>
+                    <input
+                      type="text"
+                      name="phone"
+                      defaultValue={editingMember?.phone || ""}
+                      placeholder="0812xxxxxxxx"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      No. Kontak Orang Tua / Wali
+                    </label>
+                    <input
+                      type="text"
+                      name="parentPhone"
+                      defaultValue={editingMember?.parentPhone || ""}
+                      placeholder="0813xxxxxxxx"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Catatan Administratif
+                  </label>
+                  <textarea
+                    name="notes"
+                    rows={2}
+                    defaultValue={editingMember?.notes || ""}
+                    placeholder="Riwayat kesehatan khusus, prestasi, dll."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  />
+                </div>
+
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{editingMember ? "Simpan Perubahan" : "Tambah Anggota"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL: Detail Anggota */}
       {detailMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Kartu Data Anggota</h3>
-              <button
-                type="button"
-                onClick={() => setDetailMember(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
-                <div className="w-12 h-12 rounded-full bg-emerald-700 text-white font-black text-lg flex items-center justify-center">
-                  {detailMember.fullName.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900">{detailMember.fullName}</h4>
-                  <p className="text-slate-500 font-mono text-[11px]">{detailMember.memberNumber}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl border border-slate-100">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Tingkatan</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.scoutLevel}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Regu / Sangga</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.group?.name || "-"}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Jenis Kelamin</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">
-                    {detailMember.gender === "L" ? "Laki-laki" : "Perempuan"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Kelas</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.classGrade || "-"}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Telepon Anggota</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.phone || "-"}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Kontak Orang Tua</span>
-                  <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.parentPhone || "-"}</p>
-                </div>
-              </div>
-
-              {detailMember.notes && (
-                <div className="p-3 bg-slate-50 rounded-2xl">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Catatan Khusus</span>
-                  <p className="text-slate-700 text-xs mt-1">{detailMember.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 flex gap-2">
-              {canEdit && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">Kartu Data Anggota</h3>
                 <button
                   type="button"
-                  onClick={() => {
-                    const toDelete = detailMember;
-                    setDetailMember(null);
-                    setDeletingMember(toDelete);
-                  }}
-                  className="py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5"
+                  onClick={() => setDetailMember(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus</span>
+                  <X className="w-5 h-5" />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setDetailMember(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
-              >
-                Tutup Kartu Anggota
-              </button>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
+                  <div className="w-12 h-12 rounded-full bg-emerald-700 text-white font-black text-lg flex items-center justify-center">
+                    {detailMember.fullName.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{detailMember.fullName}</h4>
+                    <p className="text-slate-500 font-mono text-[11px]">{detailMember.memberNumber}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Tingkatan</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.scoutLevel}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Regu / Sangga</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.group?.name || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Jenis Kelamin</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">
+                      {detailMember.gender === "L" ? "Laki-laki" : "Perempuan"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Kelas</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.classGrade || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Telepon Anggota</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.phone || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Kontak Orang Tua</span>
+                    <p className="font-semibold text-slate-800 text-xs mt-0.5">{detailMember.parentPhone || "-"}</p>
+                  </div>
+                </div>
+
+                {detailMember.notes && (
+                  <div className="p-3 bg-slate-50 rounded-2xl">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Catatan Khusus</span>
+                    <p className="text-slate-700 text-xs mt-1">{detailMember.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const toDelete = detailMember;
+                      setDetailMember(null);
+                      setDeletingMember(toDelete);
+                    }}
+                    className="py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDetailMember(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
+                >
+                  Tutup Kartu Anggota
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -708,43 +712,45 @@ export function MembersClientView({
 
       {/* MODAL: Konfirmasi Hapus Anggota */}
       {deletingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-
-            <div className="text-center space-y-1">
-              <h3 className="font-bold text-base text-slate-900">Hapus Data Anggota?</h3>
-              <p className="text-xs text-slate-500">
-                Apakah Anda yakin ingin menghapus data anggota <span className="font-bold text-slate-800">{deletingMember.fullName}</span> (NTA: {deletingMember.memberNumber})? Data presensi dan histori terkait akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.
-              </p>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
               </div>
-            )}
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingMember(null)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteMember}
-                disabled={deleteLoading}
-                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
-              >
-                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{deleteLoading ? "Menghapus..." : "Ya, Hapus"}</span>
-              </button>
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-base text-slate-900">Hapus Data Anggota?</h3>
+                <p className="text-xs text-slate-500">
+                  Apakah Anda yakin ingin menghapus data anggota <span className="font-bold text-slate-800">{deletingMember.fullName}</span> (NTA: {deletingMember.memberNumber})? Data presensi dan histori terkait akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingMember(null)}
+                  className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteMember}
+                  disabled={deleteLoading}
+                  className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+                >
+                  {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{deleteLoading ? "Menghapus..." : "Ya, Hapus"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

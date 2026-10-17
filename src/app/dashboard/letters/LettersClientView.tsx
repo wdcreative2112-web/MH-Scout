@@ -694,36 +694,16 @@ export function LettersClientView({
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 2: PRATINJAU & CETAK PDF / WHATSAPP SURAT IZIN */}
-      {/* ============================================================== */}
-      {previewPermitData && (
-        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-start justify-center p-0 sm:p-4 md:p-6 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-4xl bg-white sm:rounded-3xl shadow-2xl border-x sm:border border-slate-100 my-0 sm:my-8 overflow-hidden p-3 sm:p-6 min-h-screen sm:min-h-0">
-            <PermitLetterTemplate
-              data={previewPermitData}
-              organization={organizationProfile}
-              showActions={true}
-              onClose={() => setPreviewPermitData(null)}
-              printUrl={
-                typeof window !== "undefined"
-                  ? `${window.location.origin}/dashboard/letters/${previewPermitData.id || ""}/print`
-                  : ""
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL 3: TAMBAH / UBAH SURAT BIASA (STANDAR) */}
+      {/* MODAL: TAMBAH / UBAH SURAT BIASA (STANDAR) */}
       {/* ============================================================== */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-base text-slate-900">
-                {editingLetter ? "Ubah Data Surat Biasa" : "Catat Arsip Surat Baru"}
-              </h3>
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="font-bold text-base text-slate-900">
+                  {editingLetter ? "Ubah Data Surat Biasa" : "Catat Arsip Surat Baru"}
+                </h3>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
@@ -877,15 +857,17 @@ export function LettersClientView({
             </form>
           </div>
         </div>
+      </div>
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 4: DETAIL SURAT STANDAR */}
+      {/* MODAL: DETAIL SURAT STANDAR */}
       {/* ============================================================== */}
       {detailLetter && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <span
                   className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
@@ -973,35 +955,39 @@ export function LettersClientView({
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* ============================================================== */}
       {/* MODAL: PRATINJAU & UNDUH SURAT IZIN RESMI */}
       {/* ============================================================== */}
       {previewPermitData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:m-0 print:overflow-visible print:static">
-          <div className="max-w-4xl w-full my-auto py-4 animate-in zoom-in-95 duration-150 print:p-0 print:m-0 print:max-w-none">
-            <PermitLetterTemplate
-              data={previewPermitData}
-              organization={organizationProfile}
-              showActions={true}
-              onClose={() => setPreviewPermitData(null)}
-              printUrl={
-                typeof window !== "undefined" && previewPermitData.id
-                  ? `${window.location.origin}/dashboard/letters/${previewPermitData.id}/print`
-                  : undefined
-              }
-            />
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/80 backdrop-blur-xs p-2 sm:p-4 print:bg-transparent print:backdrop-blur-none print:p-0 print:m-0 print:overflow-visible print:static">
+          <div className="min-h-full flex items-center justify-center py-4 print:p-0 print:m-0">
+            <div className="max-w-4xl w-full my-auto animate-in zoom-in-95 duration-150 print:p-0 print:m-0 print:max-w-none">
+              <PermitLetterTemplate
+                data={previewPermitData}
+                organization={organizationProfile}
+                showActions={true}
+                onClose={() => setPreviewPermitData(null)}
+                printUrl={
+                  typeof window !== "undefined" && previewPermitData.id
+                    ? `${window.location.origin}/dashboard/letters/${previewPermitData.id}/print`
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 5: KONFIRMASI HAPUS SURAT */}
+      {/* MODAL: KONFIRMASI HAPUS SURAT */}
       {/* ============================================================== */}
       {deletingLetter && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -1050,6 +1036,7 @@ export function LettersClientView({
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

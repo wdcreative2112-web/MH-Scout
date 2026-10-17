@@ -232,12 +232,13 @@ export function ActivitiesClientView({ initialActivities, canEdit }: ActivitiesC
 
       {/* Modal Add / Edit Activity */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingActivity ? "Ubah Agenda Kegiatan" : "Buat Agenda Kegiatan Baru"}
-              </h3>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">
+                  {editingActivity ? "Ubah Agenda Kegiatan" : "Buat Agenda Kegiatan Baru"}
+                </h3>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
@@ -385,18 +386,20 @@ export function ActivitiesClientView({ initialActivities, canEdit }: ActivitiesC
             </form>
           </div>
         </div>
+      </div>
       )}
 
       {/* MODAL: Konfirmasi Hapus Kegiatan */}
       {deletingActivity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
 
-            <div className="text-center space-y-1">
-              <h3 className="font-bold text-base text-slate-900">Hapus Agenda Kegiatan?</h3>
+              <div className="text-center space-y-1">
+                <h3 className="font-bold text-base text-slate-900">Hapus Agenda Kegiatan?</h3>
               <p className="text-xs text-slate-500">
                 Apakah Anda yakin ingin menghapus kegiatan <span className="font-bold text-slate-800">{deletingActivity.title}</span>? Tautan ke pertemuan atau album galeri terkait akan dilepaskan secara aman.
               </p>
@@ -429,6 +432,7 @@ export function ActivitiesClientView({ initialActivities, canEdit }: ActivitiesC
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

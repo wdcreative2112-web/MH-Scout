@@ -655,54 +655,56 @@ export function DonationClientView({
       {zoomQrAccount && zoomQrAccount.qrImageUrl && (
         <div
           onClick={() => setZoomQrAccount(null)}
-          className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md p-4 flex items-center justify-center cursor-pointer animate-in fade-in"
+          className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/80 backdrop-blur-md p-3 sm:p-4 cursor-pointer animate-in fade-in"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative"
-          >
-            <button
-              type="button"
-              onClick={() => setZoomQrAccount(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700"
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl relative my-auto cursor-default"
             >
-              ✕
-            </button>
-            <h3 className="font-black text-slate-900 text-base">
-              {zoomQrAccount.bankName}
-            </h3>
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
-              <img
-                src={zoomQrAccount.qrImageUrl}
-                alt={zoomQrAccount.bankName}
-                className="w-64 h-64 object-contain mx-auto rounded-xl"
-              />
-            </div>
-            {zoomQrAccount.accountNumber &&
-              zoomQrAccount.accountNumber !== "QRIS" &&
-              !zoomQrAccount.bankName.toLowerCase().includes("qris") && (
-                <p className="text-xs text-slate-500 font-mono font-bold">
-                  {zoomQrAccount.accountNumber}
-                </p>
-              )}
-            <p className="text-xs text-slate-600">
-              a.n. <strong>{zoomQrAccount.accountHolder}</strong>
-            </p>
-            <div className="pt-1">
-              <a
-                href={zoomQrAccount.qrImageUrl}
-                download={`${zoomQrAccount.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
+              <button
+                type="button"
+                onClick={() => setZoomQrAccount(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700"
               >
-                <Download className="w-4 h-4" />
-                <span>Unduh Barcode QRIS</span>
-              </a>
+                ✕
+              </button>
+              <h3 className="font-black text-slate-900 text-base">
+                {zoomQrAccount.bankName}
+              </h3>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
+                <img
+                  src={zoomQrAccount.qrImageUrl}
+                  alt={zoomQrAccount.bankName}
+                  className="w-64 h-64 object-contain mx-auto rounded-xl"
+                />
+              </div>
+              {zoomQrAccount.accountNumber &&
+                zoomQrAccount.accountNumber !== "QRIS" &&
+                !zoomQrAccount.bankName.toLowerCase().includes("qris") && (
+                  <p className="text-xs text-slate-500 font-mono font-bold">
+                    {zoomQrAccount.accountNumber}
+                  </p>
+                )}
+              <p className="text-xs text-slate-600">
+                a.n. <strong>{zoomQrAccount.accountHolder}</strong>
+              </p>
+              <div className="pt-1">
+                <a
+                  href={zoomQrAccount.qrImageUrl}
+                  download={`${zoomQrAccount.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Unduh Barcode QRIS</span>
+                </a>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Mendukung aplikasi mobile banking dan seluruh dompet digital standar QRIS Nasional.
+              </p>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Mendukung aplikasi mobile banking dan seluruh dompet digital standar QRIS Nasional.
-            </p>
           </div>
         </div>
       )}

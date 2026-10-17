@@ -542,8 +542,9 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
 
       {/* MODAL: Tambah / Ubah Jenis Iuran */}
       {typeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingType ? "Ubah Jenis Iuran" : "Tambah Jenis Iuran Baru"}
@@ -631,14 +632,16 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL: Buat Tagihan Periode Massal */}
       {billModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-bold text-slate-900">Buat Tagihan Iuran Massal</h3>
               <button
@@ -702,14 +705,16 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL: Bayar Iuran */}
       {payModalOpen && payingBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-bold text-slate-900">Catat Setoran Iuran</h3>
               <button
@@ -774,14 +779,16 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL: Konfirmasi Hapus Jenis Iuran */}
       {deletingType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -809,14 +816,16 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                 <span>Hapus</span>
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL: Konfirmasi Hapus Tagihan */}
       {deletingBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -843,6 +852,7 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                 {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>Batalkan Tagihan</span>
               </button>
+            </div>
             </div>
           </div>
         </div>

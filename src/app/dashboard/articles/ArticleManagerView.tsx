@@ -275,8 +275,9 @@ export function ArticleManagerView({
 
       {/* Modal Tulis / Ubah Artikel */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="font-bold text-base text-slate-900">
                 {editingArticle ? "Ubah Materi Artikel" : "Tulis Artikel Baru"}
@@ -404,14 +405,16 @@ export function ArticleManagerView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal Konfirmasi Hapus Artikel */}
       {deletingArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -438,6 +441,7 @@ export function ArticleManagerView({
                 {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>Hapus Artikel</span>
               </button>
+            </div>
             </div>
           </div>
         </div>

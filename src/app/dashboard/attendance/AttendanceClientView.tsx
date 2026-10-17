@@ -2312,8 +2312,9 @@ export function AttendanceClientView({
       {/* MODAL 1: ATUR JADWAL RUTIN MINGGUAN PERMANEN (HARI BERJALAN SETERUSNYA)    */}
       {/* ========================================================================= */}
       {routineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
@@ -2451,6 +2452,7 @@ export function AttendanceClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -2459,8 +2461,9 @@ export function AttendanceClientView({
       {/* MODAL 2: BUAT JADWAL TUNGGAL / KHUSUS                                      */}
       {/* ========================================================================= */}
       {createMeetingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-lg font-black text-slate-900">Buat Jadwal Latihan</h3>
@@ -2582,6 +2585,7 @@ export function AttendanceClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -2590,8 +2594,9 @@ export function AttendanceClientView({
       {/* MODAL 3: UBAH DATA PERTEMUAN (EDIT MEETING)                                */}
       {/* ========================================================================= */}
       {editMeetingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-lg font-black text-slate-900">Ubah Data Pertemuan</h3>
               <button
@@ -2726,6 +2731,7 @@ export function AttendanceClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -2734,8 +2740,9 @@ export function AttendanceClientView({
       {/* MODAL 4: KONFIRMASI HAPUS PERTEMUAN                                        */}
       {/* ========================================================================= */}
       {deleteMeetingConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150 text-center">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150 text-center">
             <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -2763,8 +2770,9 @@ export function AttendanceClientView({
                 className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 flex items-center gap-1.5"
               >
                 {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Ya, Hapus</span>
+                <span>{actionLoading ? "Menghapus..." : "Ya, Hapus"}</span>
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -2774,8 +2782,9 @@ export function AttendanceClientView({
       {/* MODAL 5: EDIT KETERANGAN / CATATAN ANGGOTA (IZIN / SAKIT)                  */}
       {/* ========================================================================= */}
       {editingNoteMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-emerald-600" />
@@ -2847,6 +2856,7 @@ export function AttendanceClientView({
                   Simpan Catatan
                 </button>
               )}
+            </div>
             </div>
           </div>
         </div>

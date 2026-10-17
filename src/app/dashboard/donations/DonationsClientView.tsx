@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from "react";
+import React, { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -103,6 +103,8 @@ export function DonationsClientView({
   const [accountQrPreview, setAccountQrPreview] = useState<string | null>(null);
   const [accountQrUrlInput, setAccountQrUrlInput] = useState<string>("");
   const [removeQrImage, setRemoveQrImage] = useState(false);
+  const [selectedQrFile, setSelectedQrFile] = useState<File | null>(null);
+  const qrFileInputRef = useRef<HTMLInputElement>(null);
 
   // Toast / feedback message
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -640,6 +642,8 @@ export function DonationsClientView({
                 setAccountQrPreview(null);
                 setAccountQrUrlInput("");
                 setRemoveQrImage(false);
+                setSelectedQrFile(null);
+                if (qrFileInputRef.current) qrFileInputRef.current.value = "";
                 setAccountModalOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
@@ -750,6 +754,8 @@ export function DonationsClientView({
                       setAccountQrPreview(cleanQr);
                       setAccountQrUrlInput("");
                       setRemoveQrImage(false);
+                      setSelectedQrFile(null);
+                      if (qrFileInputRef.current) qrFileInputRef.current.value = "";
                       setAccountModalOpen(true);
                     }}
                     className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
@@ -776,12 +782,13 @@ export function DonationsClientView({
       {proofModalUrl && (
         <div
           onClick={() => setProofModalUrl(null)}
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm p-4 flex items-center justify-center cursor-pointer animate-in fade-in"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4 cursor-pointer animate-in fade-in"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white p-5 rounded-3xl max-w-lg w-full text-center space-y-3 shadow-2xl relative"
-          >
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white p-5 rounded-3xl max-w-lg w-full text-center space-y-3 shadow-2xl relative my-auto"
+            >
             <button
               type="button"
               onClick={() => setProofModalUrl(null)}
@@ -806,14 +813,16 @@ export function DonationsClientView({
               <span>Buka Gambar Penuh di Tab Baru</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL 2: TOLAK DONASI */}
       {rejectModalData && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in">
-          <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl my-auto">
             <h3 className="font-black text-slate-900 text-base">
               Tolak Donasi #{rejectModalData.number}
             </h3>
@@ -846,14 +855,16 @@ export function DonationsClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL 3: TAMBAH / EDIT KAMPANYE */}
       {campaignModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-auto">
             <div className="flex justify-between items-center">
               <h3 className="font-black text-slate-900 text-lg">
                 {editingCampaign ? "Edit Program Kampanye" : "Tambah Program Kampanye Baru"}
@@ -1001,14 +1012,16 @@ export function DonationsClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* MODAL 4: TAMBAH / EDIT REKENING */}
       {accountModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-auto">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-black text-slate-900 text-lg">
@@ -1032,6 +1045,9 @@ export function DonationsClientView({
                 e.preventDefault();
                 const form = e.currentTarget;
                 const formData = new FormData(form);
+                if (selectedQrFile) {
+                  formData.set("qrImage", selectedQrFile);
+                }
                 startTransition(async () => {
                   const res = await saveAccountAction(formData);
                   if (res.success) {
@@ -1046,6 +1062,7 @@ export function DonationsClientView({
                       });
                     }
                     setAccountModalOpen(false);
+                    setSelectedQrFile(null);
                     router.refresh();
                   } else {
                     showToast("error", res.error || "Gagal menyimpan rekening.");
@@ -1140,12 +1157,14 @@ export function DonationsClientView({
                     <QrCode className="w-4 h-4 text-emerald-700" />
                     <span>Upload Berkas Barcode QRIS</span>
                   </label>
-                  {accountQrPreview && !removeQrImage && (
+                  {(accountQrPreview || selectedQrFile) && !removeQrImage && (
                     <button
                       type="button"
                       onClick={() => {
+                        setSelectedQrFile(null);
                         setRemoveQrImage(true);
                         setAccountQrPreview(null);
+                        if (qrFileInputRef.current) qrFileInputRef.current.value = "";
                       }}
                       className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline"
                     >
@@ -1154,43 +1173,60 @@ export function DonationsClientView({
                   )}
                 </div>
 
+                {/* Input file asli yang permanen di DOM agar file tidak hilang saat re-render */}
+                <input
+                  ref={qrFileInputRef}
+                  type="file"
+                  name="qrImage"
+                  id="account-qr-file-input"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setSelectedQrFile(f);
+                      setAccountQrPreview(URL.createObjectURL(f));
+                      setRemoveQrImage(false);
+                    }
+                  }}
+                />
+
                 {/* Pratinjau Barcode Terpasang atau Berkas Baru yang Dipilih */}
-                {accountQrPreview && !removeQrImage ? (
+                {(accountQrPreview || selectedQrFile) && !removeQrImage ? (
                   <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-emerald-300 shadow-2xs">
                     <img
-                      src={accountQrPreview}
+                      src={accountQrPreview || ""}
                       alt="Pratinjau QRIS"
                       className="w-24 h-24 object-contain rounded-lg border border-slate-200 shrink-0 bg-white"
                     />
                     <div className="space-y-1.5 text-xs">
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        ✓ Berkas QRIS Terpasang
+                        {selectedQrFile ? "✓ Berkas Baru Siap Disimpan" : "✓ Berkas QRIS Terpasang"}
                       </span>
+                      {selectedQrFile && (
+                        <p className="font-semibold text-slate-800 text-[11px] truncate max-w-[220px]">
+                          {selectedQrFile.name} ({(selectedQrFile.size / 1024).toFixed(0)} KB)
+                        </p>
+                      )}
                       <p className="text-slate-600 text-[11px] leading-relaxed">
-                        Barcode ini akan langsung muncul di halaman donasi publik dan popup pembayaran donatur.
+                        Barcode ini akan langsung muncul di halaman donasi publik dan popup pembayaran donatur setelah disimpan.
                       </p>
-                      <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer">
+                      <button
+                        type="button"
+                        onClick={() => qrFileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                      >
                         <Upload className="w-3.5 h-3.5" />
                         <span>Pilih berkas lain untuk mengganti</span>
-                        <input
-                          type="file"
-                          name="qrImage"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                              setAccountQrPreview(URL.createObjectURL(f));
-                              setRemoveQrImage(false);
-                            }
-                          }}
-                        />
-                      </label>
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-4 text-center transition-colors bg-white">
+                    <div
+                      onClick={() => qrFileInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-4 text-center transition-colors bg-white cursor-pointer"
+                    >
                       <Upload className="w-7 h-7 text-emerald-600 mx-auto mb-1.5" />
                       <p className="text-xs font-bold text-slate-800">
                         Pilih file gambar QRIS resmi dari perangkat Anda
@@ -1199,19 +1235,12 @@ export function DonationsClientView({
                         Format didukung: PNG, JPG, JPEG, WEBP (Maksimal 10 MB)
                       </p>
                       <div className="mt-3">
-                        <input
-                          type="file"
-                          name="qrImage"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                              setAccountQrPreview(URL.createObjectURL(f));
-                              setRemoveQrImage(false);
-                            }
-                          }}
-                          className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
-                        />
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold text-xs hover:bg-emerald-100 transition-colors pointer-events-none"
+                        >
+                          Pilih Berkas Gambar
+                        </button>
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-500">
@@ -1253,6 +1282,7 @@ export function DonationsClientView({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
