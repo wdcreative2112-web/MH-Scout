@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from "react";
+import React, { useState, useTransition, useEffect, useRef } from "react";
 import {
   Heart,
   X,
@@ -17,6 +17,8 @@ import {
   Phone,
   Mail,
   MessageSquare,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { DonationCampaign, DonationAccount } from "@/types";
 import { submitDonationAction } from "@/actions/donations";
@@ -39,6 +41,66 @@ const PRESET_AMOUNTS = [
   500000,
   1000000,
 ];
+
+// Client-side image compression to optimize high-res phone camera receipts
+async function compressProofImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type.includes("svg") || file.size < 600 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDimension = 1600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const safeName = file.name.replace(/\.[^/.]+$/, ".jpg");
+            const compressedFile = new File([blob], safeName, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          "image/jpeg",
+          0.82
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
 
 export function DonationModalForm({
   campaigns,
@@ -67,8 +129,12 @@ export function DonationModalForm({
   );
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [successResult, setSuccessResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const modalContainerRef = useRef<HTMLDivElement>(null);
+  const bottomErrorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -99,13 +165,42 @@ export function DonationModalForm({
     setSelectedAmount(val ? parseInt(val, 10) : 0);
   };
 
-  const handleProofChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProofChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    // Validasi tipe berkas
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/avif"];
+    const isImage = validTypes.includes(file.type) || file.type.startsWith("image/");
+    if (!isImage) {
+      setErrorMessage("Format berkas tidak didukung. Harap pilih gambar foto/tangkapan layar format JPG, PNG, atau WEBP.");
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setErrorMessage("Ukuran gambar terlalu besar (maksimal 20 MB).");
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsCompressing(true);
+
+    try {
+      const processedFile = await compressProofImage(file);
+      setProofFile(processedFile);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProofPreview(reader.result as string);
+        setIsCompressing(false);
+      };
+      reader.readAsDataURL(processedFile);
+    } catch {
       setProofFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setProofPreview(reader.result as string);
+        setIsCompressing(false);
       };
       reader.readAsDataURL(file);
     }
@@ -120,20 +215,21 @@ export function DonationModalForm({
       : selectedAmount;
 
     if (finalAmount < 10000) {
-      setErrorMessage("Nominal donasi minimal adalah Rp 10.000.");
+      const err = "Nominal donasi minimal adalah Rp 10.000.";
+      setErrorMessage(err);
+      bottomErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    if (!isAnonymous && !donorName.trim()) {
-      setErrorMessage("Silakan isi nama Anda atau pilih opsi Hamba Allah / Anonim.");
-      return;
-    }
+    const trimmedName = donorName.trim();
+    const finalDonorName = trimmedName || (isAnonymous ? "Hamba Allah" : "Hamba Allah");
+    const finalIsAnonymous = isAnonymous || !trimmedName;
 
     const formData = new FormData();
-    formData.append("donorName", isAnonymous ? "Hamba Allah" : donorName);
-    formData.append("isAnonymous", isAnonymous ? "true" : "false");
-    formData.append("donorEmail", donorEmail);
-    formData.append("donorPhone", donorPhone);
+    formData.append("donorName", finalDonorName);
+    formData.append("isAnonymous", finalIsAnonymous ? "true" : "false");
+    formData.append("donorEmail", donorEmail.trim());
+    formData.append("donorPhone", donorPhone.trim());
     formData.append("amount", String(finalAmount));
     formData.append("campaignId", selectedCampaignId || "");
     formData.append("paymentMethod", paymentMethod);
@@ -141,17 +237,57 @@ export function DonationModalForm({
       "bankName",
       currentAccount ? currentAccount.bankName : "Transfer Bank"
     );
-    formData.append("message", message);
+    formData.append("message", message.trim());
     if (proofFile) {
       formData.append("proof", proofFile);
     }
 
     startTransition(async () => {
-      const res = await submitDonationAction(formData);
-      if (res.success) {
-        setSuccessResult(res.donation);
-      } else {
-        setErrorMessage(res.error || "Gagal mengirim donasi.");
+      try {
+        let result: any = null;
+
+        // 1. Coba lewat API route endpoint (resisten terhadap pembatasan body size Server Action)
+        try {
+          const apiRes = await fetch("/api/donations/submit", {
+            method: "POST",
+            body: formData,
+          });
+          if (apiRes.ok) {
+            result = await apiRes.json();
+          } else {
+            const errData = await apiRes.json().catch(() => ({}));
+            result = {
+              success: false,
+              error: errData.error || `Server merespon dengan kode ${apiRes.status}`,
+            };
+          }
+        } catch (fetchErr: any) {
+          console.warn("API route submit failed, falling back to server action:", fetchErr);
+        }
+
+        // 2. Fallback ke Server Action jika endpoint API gagal
+        if (!result || !result.success) {
+          const actionRes = await submitDonationAction(formData);
+          if (actionRes) {
+            result = actionRes;
+          }
+        }
+
+        if (result && result.success) {
+          setSuccessResult(result.donation);
+          modalContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          setErrorMessage(
+            result?.error || "Gagal mengirim konfirmasi donasi. Silakan periksa kembali data Anda."
+          );
+          bottomErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      } catch (err: any) {
+        console.error("Donation submit error:", err);
+        setErrorMessage(
+          err?.message || "Terjadi kendala saat mengirim donasi. Silakan periksa koneksi internet Anda dan coba lagi."
+        );
+        bottomErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     });
   };
@@ -166,7 +302,10 @@ export function DonationModalForm({
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-start justify-center p-0 sm:p-4 md:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl bg-white sm:rounded-3xl shadow-2xl border-x sm:border border-slate-100 my-0 sm:my-8 overflow-hidden flex flex-col min-h-screen sm:min-h-0">
+      <div
+        ref={modalContainerRef}
+        className="relative w-full max-w-xl bg-white sm:rounded-3xl shadow-2xl border-x sm:border border-slate-100 my-0 sm:my-8 overflow-hidden flex flex-col min-h-screen sm:min-h-0"
+      >
         {/* Header Modal - STICKY TOP */}
         <div className="sticky top-0 z-30 bg-gradient-to-r from-scout-950 via-scout-900 to-emerald-950 text-white px-4 py-3 sm:px-6 sm:py-4 shadow-md border-b border-emerald-500/20">
           <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-300/40 to-transparent pointer-events-none" />
@@ -346,8 +485,9 @@ export function DonationModalForm({
                   onClick={() => {
                     setPaymentMethod("QRIS");
                     const qrisAcc =
-                      accounts.find((a) => a.bankName.toLowerCase().includes("qris") || a.accountNumber === "QRIS") ||
-                      accounts.find((a) => a.qrImageUrl);
+                      accounts.find((a) => (a.bankName.toLowerCase().includes("qris") || a.accountNumber === "QRIS") && a.qrImageUrl) ||
+                      accounts.find((a) => a.qrImageUrl) ||
+                      accounts.find((a) => a.bankName.toLowerCase().includes("qris") || a.accountNumber === "QRIS");
                     if (qrisAcc) {
                       setSelectedAccountId(qrisAcc.id);
                     }
@@ -385,11 +525,9 @@ export function DonationModalForm({
 
                           <div>
                             <a
-                              href={currentAccount.qrImageUrl}
+                              href={`/api/donations/download-qris?url=${encodeURIComponent(currentAccount.qrImageUrl)}&id=${currentAccount.id}&filename=QRIS-PRAMUKA-MH-SCOUT.png`}
                               download="QRIS-PRAMUKA-MH-SCOUT.png"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 shadow-2xs hover:shadow-xs transition-all active:scale-95"
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 shadow-2xs hover:shadow-xs transition-all active:scale-95 cursor-pointer"
                             >
                               <Download className="w-4 h-4 text-emerald-700" />
                               <span>Unduh Barcode QRIS</span>
@@ -498,12 +636,15 @@ export function DonationModalForm({
               {!isAnonymous && (
                 <div>
                   <label className="block text-xs text-slate-600 font-medium mb-1">
-                    Nama Lengkap / Komunitas
+                    Nama Lengkap / Komunitas{" "}
+                    <span className="text-slate-400 font-normal">
+                      (Kosongkan jika ingin tampil sebagai Hamba Allah)
+                    </span>
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Contoh: Kak Budi Santoso / Alumni 2020"
+                      placeholder="Contoh: Kak Budi Santoso / Kosongkan jika Hamba Allah"
                       value={donorName}
                       onChange={(e) => setDonorName(e.target.value)}
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
@@ -577,7 +718,14 @@ export function DonationModalForm({
                   onChange={handleProofChange}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                 />
-                {proofPreview ? (
+                {isCompressing ? (
+                  <div className="py-6 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                    <p className="text-xs font-bold text-slate-700">
+                      Mengoptimalkan ukuran gambar bukti transfer...
+                    </p>
+                  </div>
+                ) : proofPreview ? (
                   <div className="space-y-2">
                     <img
                       src={proofPreview}
@@ -585,7 +733,7 @@ export function DonationModalForm({
                       className="h-28 object-contain mx-auto rounded-lg border border-slate-200"
                     />
                     <p className="text-xs font-semibold text-emerald-700">
-                      Klik untuk mengganti gambar bukti transfer
+                      Klik untuk mengganti gambar bukti transfer (Tersedia)
                     </p>
                   </div>
                 ) : (
@@ -595,22 +743,50 @@ export function DonationModalForm({
                       Pilih atau Seret Foto / Tangkapan Layar Bukti Transfer
                     </p>
                     <p className="text-[10px] text-slate-400">
-                      Format: JPG, PNG, WEBP (Maksimal 10 MB)
+                      Format: JPG, PNG, WEBP (Maksimal 20 MB, otomatis dioptimalkan)
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Bottom Error Alert (visible even after scrolling to bottom) */}
+            {errorMessage && (
+              <div
+                ref={bottomErrorRef}
+                className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage(null)}
+                  className="text-rose-500 hover:text-rose-700 text-xs font-bold p-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <button
                 type="submit"
-                disabled={isPending}
-                className="flex-1 py-3.5 px-6 rounded-xl text-white font-bold text-xs sm:text-sm glossy-button-primary flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-50"
+                disabled={isPending || isCompressing}
+                className="flex-1 py-3.5 px-6 rounded-xl text-white font-bold text-xs sm:text-sm glossy-button-primary flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 {isPending ? (
-                  <span>Mengirim Konfirmasi Donasi...</span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Mengirim Konfirmasi Donasi...</span>
+                  </>
+                ) : isCompressing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Memproses Gambar Bukti...</span>
+                  </>
                 ) : (
                   <>
                     <span>Kirim Donasi & Konfirmasi Sekarang</span>
@@ -621,7 +797,7 @@ export function DonationModalForm({
               <button
                 type="button"
                 onClick={resetForm}
-                className="py-3 px-5 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 text-xs sm:text-sm font-semibold transition-colors"
+                className="py-3 px-5 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
               >
                 Batal
               </button>

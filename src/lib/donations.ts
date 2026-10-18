@@ -689,64 +689,73 @@ export async function saveDonationAccount(
 
   saveStore(store);
 
-  // 2. Dual-write sinkronisasi ke Prisma PostgreSQL database
+  // 2. Dual-write sinkronisasi ke Prisma PostgreSQL database (dengan timeout agar tidak memblokir user)
   try {
     const delegate = getPrismaAccount();
     if (delegate) {
-      let existingDb: any = null;
-      if (account.id) {
-        existingDb = await delegate.findUnique({
-          where: { id: account.id },
-        }).catch(() => null);
-      }
-      if (!existingDb && account.accountNumber) {
-        existingDb = await delegate.findFirst({
-          where: { accountNumber: account.accountNumber },
-        }).catch(() => null);
-      }
+      const syncPrisma = async () => {
+        let existingDb: any = null;
+        if (account.id) {
+          existingDb = await delegate.findUnique({
+            where: { id: account.id },
+          }).catch(() => null);
+        }
+        if (!existingDb && account.accountNumber) {
+          existingDb = await delegate.findFirst({
+            where: { accountNumber: account.accountNumber },
+          }).catch(() => null);
+        }
 
-      if (existingDb) {
-        const dbAcc = await delegate.update({
-          where: { id: existingDb.id },
-          data: {
-            bankName: savedAccount.bankName,
-            accountNumber: savedAccount.accountNumber,
-            accountHolder: savedAccount.accountHolder,
-            qrImageUrl: savedAccount.qrImageUrl,
-            description: savedAccount.description,
-            isActive: savedAccount.isActive,
-            sortOrder: savedAccount.sortOrder,
-          },
-        });
-        savedAccount.id = dbAcc.id;
-        const stIdx = store.accounts.findIndex(
-          (a) => a.accountNumber === savedAccount.accountNumber || a.id === account.id
-        );
-        if (stIdx !== -1) {
-          store.accounts[stIdx].id = dbAcc.id;
-          saveStore(store);
+        if (existingDb) {
+          const dbAcc = await delegate.update({
+            where: { id: existingDb.id },
+            data: {
+              bankName: savedAccount.bankName,
+              accountNumber: savedAccount.accountNumber,
+              accountHolder: savedAccount.accountHolder,
+              qrImageUrl: savedAccount.qrImageUrl,
+              description: savedAccount.description,
+              isActive: savedAccount.isActive,
+              sortOrder: savedAccount.sortOrder,
+            },
+          });
+          savedAccount.id = dbAcc.id;
+          const stIdx = store.accounts.findIndex(
+            (a) => a.id === savedAccount.id || (account.id && a.id === account.id)
+          );
+          if (stIdx !== -1) {
+            store.accounts[stIdx].id = dbAcc.id;
+            saveStore(store);
+          }
+        } else {
+          const dbAcc = await delegate.create({
+            data: {
+              bankName: savedAccount.bankName,
+              accountNumber: savedAccount.accountNumber,
+              accountHolder: savedAccount.accountHolder,
+              qrImageUrl: savedAccount.qrImageUrl,
+              description: savedAccount.description,
+              isActive: savedAccount.isActive,
+              sortOrder: savedAccount.sortOrder,
+            },
+          });
+          savedAccount.id = dbAcc.id;
+          const stIdx = store.accounts.findIndex(
+            (a) => a.id === savedAccount.id || (account.id && a.id === account.id)
+          );
+          if (stIdx !== -1) {
+            store.accounts[stIdx].id = dbAcc.id;
+            saveStore(store);
+          }
         }
-      } else {
-        const dbAcc = await delegate.create({
-          data: {
-            bankName: savedAccount.bankName,
-            accountNumber: savedAccount.accountNumber,
-            accountHolder: savedAccount.accountHolder,
-            qrImageUrl: savedAccount.qrImageUrl,
-            description: savedAccount.description,
-            isActive: savedAccount.isActive,
-            sortOrder: savedAccount.sortOrder,
-          },
-        });
-        savedAccount.id = dbAcc.id;
-        const stIdx = store.accounts.findIndex(
-          (a) => a.accountNumber === savedAccount.accountNumber || a.id === account.id
-        );
-        if (stIdx !== -1) {
-          store.accounts[stIdx].id = dbAcc.id;
-          saveStore(store);
-        }
-      }
+      };
+
+      await Promise.race([
+        syncPrisma(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Prisma timeout")), 3500)),
+      ]).catch((err) => {
+        console.warn("Prisma donationAccount dual-write notice (timed out or skipped):", err?.message || err);
+      });
     }
   } catch (dbErr) {
     console.warn("Prisma donationAccount dual-write notice:", dbErr);

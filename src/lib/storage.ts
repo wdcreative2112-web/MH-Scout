@@ -10,18 +10,20 @@ export interface UploadResult {
   size: number;
 }
 
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/avif"];
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
+  "image/bmp": ".bmp",
+  "image/avif": ".avif",
 };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export function resolveImageMimeType(type?: string, fileName?: string): string | null {
   const normalized = (type || "").toLowerCase().trim();
-  if (normalized === "image/jpeg" || normalized === "image/jpg" || normalized === "image/pjpeg") {
+  if (normalized === "image/jpeg" || normalized === "image/jpg" || normalized === "image/pjpeg" || normalized === "image/jfif") {
     return "image/jpeg";
   }
   if (normalized === "image/png" || normalized === "image/x-png") {
@@ -33,13 +35,21 @@ export function resolveImageMimeType(type?: string, fileName?: string): string |
   if (normalized === "image/gif") {
     return "image/gif";
   }
+  if (normalized === "image/bmp" || normalized === "image/x-ms-bmp") {
+    return "image/bmp";
+  }
+  if (normalized === "image/avif") {
+    return "image/avif";
+  }
 
   if (fileName) {
-    const ext = path.extname(fileName).toLowerCase();
-    if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+    const ext = path.extname(fileName).toLowerCase().split("?")[0];
+    if (ext === ".jpg" || ext === ".jpeg" || ext === ".jfif") return "image/jpeg";
     if (ext === ".png") return "image/png";
     if (ext === ".webp") return "image/webp";
     if (ext === ".gif") return "image/gif";
+    if (ext === ".bmp") return "image/bmp";
+    if (ext === ".avif") return "image/avif";
   }
 
   return null;
@@ -163,6 +173,7 @@ async function uploadToNeonS3Native(
       "Authorization": authorizationHeader,
     },
     body: new Uint8Array(buffer),
+    signal: AbortSignal.timeout(4000),
   });
 
   if (!response.ok) {
@@ -231,9 +242,85 @@ async function deleteFromNeonS3Native(urlOrKey: string): Promise<boolean> {
       "x-amz-content-sha256": payloadHash,
       "Authorization": authorizationHeader,
     },
+    signal: AbortSignal.timeout(4000),
   });
 
   return response.ok;
+}
+
+export async function downloadFromNeonS3Native(urlOrKey: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  if (!isNeonStorageConfigured()) return null;
+  try {
+    const endpoint = process.env.AWS_ENDPOINT_URL_S3!.replace(/\/$/, "");
+    const region = process.env.AWS_REGION || "ap-southeast-1";
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
+    const bucket = process.env.NEON_STORAGE_BUCKET || "uploads";
+
+    let key = urlOrKey;
+    if (urlOrKey.includes(`/${bucket}/`)) {
+      key = urlOrKey.split(`/${bucket}/`)[1];
+    } else if (urlOrKey.startsWith("http")) {
+      key = path.basename(new URL(urlOrKey).pathname);
+    }
+
+    const urlObj = new URL(`${endpoint}/${bucket}/${key}`);
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+    const dateStamp = amzDate.substring(0, 8);
+    const payloadHash = sha256("");
+
+    const canonicalHeaders =
+      `host:${urlObj.host}\n` +
+      `x-amz-content-sha256:${payloadHash}\n` +
+      `x-amz-date:${amzDate}\n`;
+
+    const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+
+    const canonicalRequest =
+      `GET\n` +
+      urlObj.pathname + `\n` +
+      `\n` +
+      canonicalHeaders + `\n` +
+      signedHeaders + `\n` +
+      payloadHash;
+
+    const algorithm = "AWS4-HMAC-SHA256";
+    const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+    const stringToSign =
+      `${algorithm}\n` +
+      `${amzDate}\n` +
+      `${credentialScope}\n` +
+      sha256(canonicalRequest);
+
+    const signingKey = getSigningKey(secretAccessKey, dateStamp, region, "s3");
+    const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
+
+    const authorizationHeader =
+      `${algorithm} Credential=${accessKeyId}/${credentialScope}, ` +
+      `SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const response = await fetch(urlObj.toString(), {
+      method: "GET",
+      headers: {
+        "host": urlObj.host,
+        "x-amz-date": amzDate,
+        "x-amz-content-sha256": payloadHash,
+        "Authorization": authorizationHeader,
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType: response.headers.get("content-type") || "image/png",
+    };
+  } catch (err) {
+    console.warn("downloadFromNeonS3Native error:", err);
+    return null;
+  }
 }
 
 export async function uploadImage(file: File): Promise<UploadResult> {
@@ -250,7 +337,17 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   const safeExt = MIME_TO_EXT[resolvedMime] || ".jpg";
   const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${safeExt}`;
 
-  // 1. Opsi Utama: Neon S3 Object Storage (Native, Zero Dependency)
+  // 1. Simpan selalu salinan lokal fisik di public/uploads agar unduhan instan dan andal
+  const uploadDir = path.join(process.cwd(), "public", "uploads");
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    const localFilePath = path.join(uploadDir, uniqueName);
+    await fs.writeFile(localFilePath, buffer);
+  } catch (err) {
+    console.warn("Local storage write warning:", err);
+  }
+
+  // 2. Opsi Utama: Neon S3 Object Storage (Native, Zero Dependency)
   if (isNeonStorageConfigured()) {
     try {
       const publicUrl = await uploadToNeonS3Native(buffer, `uploads/${uniqueName}`, resolvedMime);
@@ -266,18 +363,7 @@ export async function uploadImage(file: File): Promise<UploadResult> {
     }
   }
 
-  // 2. Opsi Fallback: Penyimpanan Lokal Fisik (public/uploads)
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-
-  try {
-    await fs.mkdir(uploadDir, { recursive: true });
-  } catch {
-    // folder sudah ada
-  }
-
-  const filePath = path.join(uploadDir, uniqueName);
-  await fs.writeFile(filePath, buffer);
-
+  // 3. Opsi Fallback: Penyimpanan Lokal Fisik
   const url = `/uploads/${uniqueName}`;
 
   return {

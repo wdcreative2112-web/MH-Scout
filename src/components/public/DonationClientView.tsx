@@ -303,11 +303,9 @@ export function DonationClientView({
                             acc.qrImageUrl ? (
                               <>
                                 <a
-                                  href={acc.qrImageUrl}
+                                  href={`/api/donations/download-qris?url=${encodeURIComponent(acc.qrImageUrl)}&id=${acc.id}&filename=QRIS-PRAMUKA-MH-SCOUT.png`}
                                   download="QRIS-PRAMUKA-MH-SCOUT.png"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white glossy-button-primary transition-all shadow-2xs active:scale-95"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white glossy-button-primary transition-all shadow-2xs active:scale-95 cursor-pointer"
                                   title="Unduh Barcode QRIS"
                                 >
                                   <Download className="w-3.5 h-3.5" />
@@ -366,11 +364,9 @@ export function DonationClientView({
                     
                     <div className="pt-1 flex flex-col gap-2">
                       <a
-                        href={qrisAccount.qrImageUrl}
+                        href={`/api/donations/download-qris?url=${encodeURIComponent(qrisAccount.qrImageUrl)}&id=${qrisAccount.id}&filename=QRIS-PRAMUKA-MH-SCOUT.png`}
                         download="QRIS-PRAMUKA-MH-SCOUT.png"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-900 bg-amber-300 hover:bg-amber-200 shadow-md transition-all active:scale-95"
+                        className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-900 bg-amber-300 hover:bg-amber-200 shadow-md transition-all active:scale-95 cursor-pointer"
                       >
                         <Download className="w-4 h-4 text-slate-900" />
                         <span>Unduh Barcode QRIS</span>
@@ -691,11 +687,9 @@ export function DonationClientView({
               </p>
               <div className="pt-1">
                 <a
-                  href={zoomQrAccount.qrImageUrl}
+                  href={`/api/donations/download-qris?url=${encodeURIComponent(zoomQrAccount.qrImageUrl)}&id=${zoomQrAccount.id}&filename=${encodeURIComponent(`${zoomQrAccount.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`)}`}
                   download={`${zoomQrAccount.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
+                  className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Unduh Barcode QRIS</span>

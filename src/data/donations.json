@@ -28,11 +28,11 @@
       "sortOrder": 3
     },
     {
-      "id": "acc-qris",
+      "id": "cmv9vf4ic0002olxn9rmlpnr5",
       "bankName": "QRIS Nasional (Semua Bank & E-Wallet)",
       "accountNumber": "QRIS",
       "accountHolder": "PRAMUKA MH SCOUT RESMI",
-      "qrImageUrl": null,
+      "qrImageUrl": "https://br-wispy-truth-b3yjbfve.storage.c-4.ap-southeast-1.aws.neon.tech/uploads/uploads/1792345414360-1e89c7565333d260.png",
       "description": "Scan barcode QRIS resmi yang diunggah oleh admin pangkalan untuk donasi via GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
       "isActive": true,
       "sortOrder": 4
@@ -109,6 +109,27 @@
     }
   ],
   "donations": [
+    {
+      "id": "don-1792349306138",
+      "donationNumber": "DON-20261018-199",
+      "campaignId": null,
+      "campaignTitle": "Donasi Umum Pangkalan",
+      "donorName": "Hamba Allah",
+      "isAnonymous": true,
+      "donorEmail": null,
+      "donorPhone": "08132455543",
+      "amount": 25000,
+      "paymentMethod": "QRIS",
+      "bankName": "QRIS Nasional (Semua Bank & E-Wallet)",
+      "proofUrl": "/uploads/1792349306087-0ca78c1aa71c2203.jpg",
+      "status": "VERIFIED",
+      "message": "amin",
+      "createdAt": "2026-10-18T18:48:26.138Z",
+      "updatedAt": "2026-10-18T18:48:26.138Z",
+      "verifiedAt": "2026-10-18T18:49:03.999Z",
+      "verifiedById": "usr-admin-01",
+      "rejectionReason": null
+    },
     {
       "id": "don-001",
       "donationNumber": "DON-20261012-001",

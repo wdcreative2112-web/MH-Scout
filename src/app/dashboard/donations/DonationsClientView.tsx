@@ -27,6 +27,8 @@ import {
   Download,
   ArrowRight,
   ChevronRight,
+  Loader2,
+  RotateCw,
 } from "lucide-react";
 import {
   DonationCampaign,
@@ -75,6 +77,8 @@ export function DonationsClientView({
   const [accountsList, setAccountsList] = useState<DonationAccount[]>(accounts);
   const [campaignsList, setCampaignsList] = useState<DonationCampaign[]>(campaigns);
   const [donationsList, setDonationsList] = useState<Donation[]>(donations);
+  const [statsData, setStatsData] = useState(stats);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setAccountsList(accounts);
@@ -87,6 +91,42 @@ export function DonationsClientView({
   useEffect(() => {
     setDonationsList(donations);
   }, [donations]);
+
+  useEffect(() => {
+    setStatsData(stats);
+  }, [stats]);
+
+  // Handle Live Refresh
+  const handleRefresh = async (silent = false) => {
+    if (!silent) setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/donations/list", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setDonationsList(data.donations || []);
+          setCampaignsList(data.campaigns || []);
+          setAccountsList(data.accounts || []);
+          if (data.stats) setStatsData(data.stats);
+          if (!silent) showToast("success", "Data donasi dan mutasi transfer berhasil diperbarui.");
+        }
+      }
+    } catch (err) {
+      if (!silent) showToast("error", "Gagal menyegarkan data. Periksa jaringan Anda.");
+    } finally {
+      if (!silent) setIsRefreshing(false);
+    }
+  };
+
+  // Auto-polling check every 25s when window is active
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        handleRefresh(true);
+      }
+    }, 25000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Modals state
   const [proofModalUrl, setProofModalUrl] = useState<string | null>(null);
@@ -108,6 +148,8 @@ export function DonationsClientView({
 
   // Toast / feedback message
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [accountModalError, setAccountModalError] = useState<string | null>(null);
+  const [campaignModalError, setCampaignModalError] = useState<string | null>(null);
 
   const showToast = (type: "success" | "error", text: string) => {
     setToast({ type, text });
@@ -199,19 +241,28 @@ export function DonationsClientView({
 
   return (
     <div className="space-y-6">
-      {/* Toast Alert */}
+      {/* Toast Alert - Fixed High Z-Index Overlay */}
       {toast && (
-        <div
-          className={`p-4 rounded-2xl flex items-center justify-between text-xs sm:text-sm font-bold shadow-lg transition-all animate-in slide-in-from-top-2 ${
-            toast.type === "success"
-              ? "bg-emerald-600 text-white"
-              : "bg-rose-600 text-white"
-          }`}
-        >
-          <span>{toast.text}</span>
-          <button onClick={() => setToast(null)} className="ml-4 opacity-80 hover:opacity-100">
-            ✕
-          </button>
+        <div className="fixed top-6 right-6 z-[9999] max-w-md w-full px-4 animate-in slide-in-from-top-3 fade-in duration-200 pointer-events-auto">
+          <div
+            className={`p-4 rounded-2xl flex items-center justify-between text-xs sm:text-sm font-bold shadow-2xl border ${
+              toast.type === "success"
+                ? "bg-emerald-600 text-white border-emerald-500 shadow-emerald-950/20"
+                : "bg-rose-600 text-white border-rose-500 shadow-rose-950/20"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {toast.type === "success" ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{toast.text}</span>
+            </div>
+            <button onClick={() => setToast(null)} className="ml-4 opacity-80 hover:opacity-100 cursor-pointer">
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -232,6 +283,17 @@ export function DonationsClientView({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleRefresh(false)}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            title="Segarkan data donasi dan mutasi transfer"
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-emerald-700 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>{isRefreshing ? "Menyegarkan..." : "Segarkan Data"}</span>
+          </button>
+
           <Link
             href="/donasi"
             target="_blank"
@@ -250,7 +312,7 @@ export function DonationsClientView({
             Total Terverifikasi
           </p>
           <p className="text-xl sm:text-2xl font-black text-emerald-700">
-            {formatRupiah(stats.totalCollected)}
+            {formatRupiah(statsData.totalCollected)}
           </p>
           <p className="text-[11px] text-slate-400">Masuk ke kas pangkalan</p>
         </div>
@@ -260,10 +322,10 @@ export function DonationsClientView({
             Menunggu Verifikasi
           </p>
           <p className="text-xl sm:text-2xl font-black text-amber-600">
-            {stats.pendingCount} Donasi
+            {statsData.pendingCount} Donasi
           </p>
           <p className="text-[11px] text-amber-700 font-medium">
-            {formatRupiah(stats.pendingAmount)} belum diproses
+            {formatRupiah(statsData.pendingAmount)} belum diproses
           </p>
         </div>
 
@@ -272,7 +334,7 @@ export function DonationsClientView({
             Total Donatur
           </p>
           <p className="text-xl sm:text-2xl font-black text-slate-900">
-            {stats.totalDonors} Orang Baik
+            {statsData.totalDonors} Orang Baik
           </p>
           <p className="text-[11px] text-slate-400">Tercatat di sistem</p>
         </div>
@@ -282,7 +344,7 @@ export function DonationsClientView({
             Program Aktif
           </p>
           <p className="text-xl sm:text-2xl font-black text-scout-900">
-            {stats.activeCampaignsCount} Program
+            {statsData.activeCampaignsCount} Program
           </p>
           <p className="text-[11px] text-slate-400">Penggalangan dana dibuka</p>
         </div>
@@ -301,9 +363,9 @@ export function DonationsClientView({
         >
           <Heart className="w-4 h-4" />
           <span>Donasi Masuk</span>
-          {stats.pendingCount > 0 && (
+          {statsData.pendingCount > 0 && (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">
-              {stats.pendingCount}
+              {statsData.pendingCount}
             </span>
           )}
         </button>
@@ -521,6 +583,7 @@ export function DonationsClientView({
               type="button"
               onClick={() => {
                 setEditingCampaign(null);
+                setCampaignModalError(null);
                 setCampaignModalOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-bold text-xs glossy-button-primary shadow-xs active:scale-95 transition-all"
@@ -604,6 +667,7 @@ export function DonationsClientView({
                         type="button"
                         onClick={() => {
                           setEditingCampaign(camp);
+                          setCampaignModalError(null);
                           setCampaignModalOpen(true);
                         }}
                         className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
@@ -643,6 +707,7 @@ export function DonationsClientView({
                 setAccountQrUrlInput("");
                 setRemoveQrImage(false);
                 setSelectedQrFile(null);
+                setAccountModalError(null);
                 if (qrFileInputRef.current) qrFileInputRef.current.value = "";
                 setAccountModalOpen(true);
               }}
@@ -718,11 +783,9 @@ export function DonationsClientView({
                           ✓ Berkas QRIS Terunggah
                         </span>
                         <a
-                          href={acc.qrImageUrl}
+                          href={`/api/donations/download-qris?url=${encodeURIComponent(acc.qrImageUrl)}&id=${acc.id}&filename=${encodeURIComponent(`${acc.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`)}`}
                           download={`${acc.bankName.replace(/[^a-zA-Z0-9]/g, "-")}-QRIS.png`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5 text-emerald-700" />
                           <span>Unduh</span>
@@ -755,6 +818,7 @@ export function DonationsClientView({
                       setAccountQrUrlInput("");
                       setRemoveQrImage(false);
                       setSelectedQrFile(null);
+                      setAccountModalError(null);
                       if (qrFileInputRef.current) qrFileInputRef.current.value = "";
                       setAccountModalOpen(true);
                     }}
@@ -872,25 +936,46 @@ export function DonationsClientView({
               <button
                 type="button"
                 onClick={() => setCampaignModalOpen(false)}
-                className="p-2 rounded-full hover:bg-slate-100"
+                className="p-2 rounded-full hover:bg-slate-100 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {/* Error Message Alert inside Campaign Modal */}
+            {campaignModalError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-2xs animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold text-rose-900">Perhatian:</p>
+                  <p className="leading-relaxed font-medium">{campaignModalError}</p>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                setCampaignModalError(null);
                 const form = e.currentTarget;
                 const formData = new FormData(form);
                 startTransition(async () => {
-                  const res = await saveCampaignAction(formData);
-                  if (res.success) {
-                    showToast("success", res.message || "Kampanye berhasil disimpan.");
-                    setCampaignModalOpen(false);
-                    router.refresh();
-                  } else {
-                    showToast("error", res.error || "Gagal menyimpan kampanye.");
+                  try {
+                    const res = await saveCampaignAction(formData);
+                    if (res?.success) {
+                      showToast("success", res.message || "Kampanye berhasil disimpan.");
+                      setCampaignModalOpen(false);
+                      setCampaignModalError(null);
+                      router.refresh();
+                    } else {
+                      const msg = res?.error || "Gagal menyimpan kampanye.";
+                      setCampaignModalError(msg);
+                      showToast("error", msg);
+                    }
+                  } catch (err: any) {
+                    const msg = err?.message || "Terjadi kesalahan sistem saat menyimpan kampanye.";
+                    setCampaignModalError(msg);
+                    showToast("error", msg);
                   }
                 });
               }}
@@ -1034,38 +1119,59 @@ export function DonationsClientView({
               <button
                 type="button"
                 onClick={() => setAccountModalOpen(false)}
-                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {/* Error Message Alert inside Modal */}
+            {accountModalError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-2xs animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold text-rose-900">Perhatian:</p>
+                  <p className="leading-relaxed font-medium">{accountModalError}</p>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                setAccountModalError(null);
                 const form = e.currentTarget;
                 const formData = new FormData(form);
                 if (selectedQrFile) {
                   formData.set("qrImage", selectedQrFile);
                 }
                 startTransition(async () => {
-                  const res = await saveAccountAction(formData);
-                  if (res.success) {
-                    showToast("success", res.message || "Rekening berhasil disimpan.");
-                    if (res.account) {
-                      setAccountsList((prev) => {
-                        const exists = prev.some((a) => a.id === res.account.id);
-                        if (exists) {
-                          return prev.map((a) => (a.id === res.account.id ? res.account : a));
-                        }
-                        return [...prev, res.account];
-                      });
+                  try {
+                    const res = await saveAccountAction(formData);
+                    if (res?.success) {
+                      showToast("success", res.message || "Rekening berhasil disimpan.");
+                      if (res.account) {
+                        setAccountsList((prev) => {
+                          const exists = prev.some((a) => a.id === res.account.id);
+                          if (exists) {
+                            return prev.map((a) => (a.id === res.account.id ? res.account : a));
+                          }
+                          return [...prev, res.account];
+                        });
+                      }
+                      setAccountModalOpen(false);
+                      setSelectedQrFile(null);
+                      setAccountModalError(null);
+                      router.refresh();
+                    } else {
+                      const msg = res?.error || "Gagal menyimpan rekening.";
+                      setAccountModalError(msg);
+                      showToast("error", msg);
                     }
-                    setAccountModalOpen(false);
-                    setSelectedQrFile(null);
-                    router.refresh();
-                  } else {
-                    showToast("error", res.error || "Gagal menyimpan rekening.");
+                  } catch (err: any) {
+                    const msg = err?.message || "Terjadi kesalahan sistem saat menyimpan rekening.";
+                    setAccountModalError(msg);
+                    showToast("error", msg);
                   }
                 });
               }}
@@ -1179,11 +1285,16 @@ export function DonationsClientView({
                   type="file"
                   name="qrImage"
                   id="account-qr-file-input"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept="image/*,.png,.jpg,.jpeg,.webp,.jfif,.bmp"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
+                      if (f.size > 10 * 1024 * 1024) {
+                        setAccountModalError("Ukuran file barcode QRIS terlalu besar. Maksimum ukuran adalah 10 MB.");
+                        return;
+                      }
+                      setAccountModalError(null);
                       setSelectedQrFile(f);
                       setAccountQrPreview(URL.createObjectURL(f));
                       setRemoveQrImage(false);
@@ -1276,9 +1387,10 @@ export function DonationsClientView({
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-white glossy-button-primary shadow-xs"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white glossy-button-primary shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isPending ? "Menyimpan..." : "Simpan Rekening"}
+                  {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{isPending ? "Sedang Menyimpan..." : "Simpan Rekening"}</span>
                 </button>
               </div>
             </form>

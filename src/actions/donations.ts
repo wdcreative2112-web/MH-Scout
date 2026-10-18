@@ -18,16 +18,17 @@ import {
  */
 export async function submitDonationAction(formData: FormData) {
   try {
-    const donorName = (formData.get("donorName") as string) || "Hamba Allah";
+    const rawDonorName = (formData.get("donorName") as string) || "";
     const isAnonymous = formData.get("isAnonymous") === "true";
-    const donorEmail = (formData.get("donorEmail") as string) || null;
-    const donorPhone = (formData.get("donorPhone") as string) || null;
+    const donorName = rawDonorName.trim() || (isAnonymous ? "Hamba Allah" : "Hamba Allah");
+    const donorEmail = (formData.get("donorEmail") as string)?.trim() || null;
+    const donorPhone = (formData.get("donorPhone") as string)?.trim() || null;
     const rawAmount = formData.get("amount") as string;
     const amount = parseFloat(rawAmount?.replace(/[^0-9]/g, "") || "0");
-    const campaignId = (formData.get("campaignId") as string) || null;
+    const campaignId = (formData.get("campaignId") as string)?.trim() || null;
     const paymentMethod = (formData.get("paymentMethod") as string) || "TRANSFER_BANK";
     const bankName = (formData.get("bankName") as string) || "Bank Transfer";
-    const message = (formData.get("message") as string) || null;
+    const message = (formData.get("message") as string)?.trim() || null;
 
     if (!amount || amount < 10000) {
       return {
@@ -51,7 +52,7 @@ export async function submitDonationAction(formData: FormData) {
     const donation = await submitDonation({
       campaignId,
       donorName,
-      isAnonymous,
+      isAnonymous: isAnonymous || !rawDonorName.trim(),
       donorEmail,
       donorPhone,
       amount,
@@ -61,8 +62,13 @@ export async function submitDonationAction(formData: FormData) {
       message,
     });
 
-    revalidatePath("/donasi");
-    revalidatePath("/dashboard/donations");
+    try {
+      revalidatePath("/donasi");
+      revalidatePath("/dashboard/donations");
+    } catch (e) {
+      // Ignore cache revalidation warning
+    }
+
     return {
       success: true,
       donation,
@@ -245,32 +251,50 @@ export async function saveAccountAction(formData: FormData) {
       return { success: false, error: "Nama pemilik rekening (atas nama) wajib diisi minimal 2 karakter." };
     }
 
+    // Penanganan dan Deteksi QRIS Barcode
+    let qrImageUrl: string | null = null;
+    const removeRequested = formData.get("removeQrImage") === "true";
+    const qrFile = formData.get("qrImage") as File | null;
+    const hasQrFile = Boolean(qrFile && qrFile.size > 0 && qrFile.name);
+    const existing = (formData.get("existingQrImageUrl") as string)?.trim() || null;
+    const hasExistingQr = Boolean(existing && !existing.includes("api.qrserver.com"));
+
     // Deteksi kanal apakah berupa QRIS atau Rekening Bank
     const isQrisChannel =
       bankName.toLowerCase().includes("qris") ||
-      accountNumber.toUpperCase() === "QRIS";
+      bankName.toLowerCase().includes("qr") ||
+      bankName.toLowerCase().includes("barcode") ||
+      accountNumber.toUpperCase() === "QRIS" ||
+      !accountNumber ||
+      accountNumber === "" ||
+      hasQrFile ||
+      (hasExistingQr && !removeRequested);
 
     if (isQrisChannel) {
-      // Kanal QRIS tidak membutuhkan nomor rekening numerik
-      accountNumber = "QRIS";
+      // Kanal QRIS tidak membutuhkan nomor rekening numerik jika dikosongkan
+      if (!accountNumber || accountNumber.toUpperCase() === "QRIS") {
+        accountNumber = "QRIS";
+      } else {
+        const cleanDigits = accountNumber.replace(/[\s-]/g, "");
+        if (cleanDigits && /^\d{5,25}$/.test(cleanDigits)) {
+          accountNumber = cleanDigits;
+        } else {
+          accountNumber = "QRIS";
+        }
+      }
     } else {
-      // Validasi nomor rekening bank: harus berupa 5-25 digit angka
+      // Validasi nomor rekening bank biasa: harus berupa 5-25 digit angka
       const cleanDigits = accountNumber.replace(/[\s-]/g, "");
       if (!cleanDigits || !/^\d{5,25}$/.test(cleanDigits)) {
         return {
           success: false,
-          error: "Nomor rekening bank tidak valid. Harap masukkan 5 sampai 25 digit angka tanpa huruf.",
+          error: "Nomor rekening bank tidak valid. Harap masukkan 5 sampai 25 digit angka tanpa huruf, atau kosongkan jika ini saluran QRIS.",
         };
       }
       accountNumber = cleanDigits;
     }
 
-    // Penanganan QRIS Barcode: Wajib berasal dari berkas yang diunggah oleh admin
-    let qrImageUrl: string | null = null;
-    const removeRequested = formData.get("removeQrImage") === "true";
-    const qrFile = formData.get("qrImage") as File | null;
-
-    if (qrFile && qrFile.size > 0 && qrFile.name) {
+    if (hasQrFile && qrFile) {
       try {
         const uploadRes = await uploadImage(qrFile);
         qrImageUrl = uploadRes.url;
@@ -284,8 +308,7 @@ export async function saveAccountAction(formData: FormData) {
       qrImageUrl = null;
     } else {
       // Gunakan berkas QRIS yang sudah ada jika tidak diubah, bersihkan jika URL generator dummy
-      const existing = (formData.get("existingQrImageUrl") as string)?.trim() || null;
-      if (existing && !existing.includes("api.qrserver.com")) {
+      if (hasExistingQr) {
         qrImageUrl = existing;
       } else {
         qrImageUrl = null;
