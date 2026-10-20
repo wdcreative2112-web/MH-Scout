@@ -6,7 +6,7 @@ import { StructureClientView } from "./StructureClientView";
 
 export const dynamic = "force-dynamic";
 
-export const DEFAULT_STRUCTURE_TEMPLATE = [
+const DEFAULT_STRUCTURE_TEMPLATE = [
   {
     id: "sec-mabigus",
     category: "PIMPINAN",
