@@ -7,10 +7,11 @@ import { Award, Plus, Edit2, Trash2, Phone, Mail, X, Loader2, AlertCircle } from
 
 interface LeadersClientViewProps {
   initialLeaders: any[];
+  availableGroups?: any[];
   canEdit: boolean;
 }
 
-export function LeadersClientView({ initialLeaders, canEdit }: LeadersClientViewProps) {
+export function LeadersClientView({ initialLeaders, availableGroups = [], canEdit }: LeadersClientViewProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLeader, setEditingLeader] = useState<any | null>(null);
@@ -138,23 +139,25 @@ export function LeadersClientView({ initialLeaders, canEdit }: LeadersClientView
                       <span>{lead.email}</span>
                     </div>
                   )}
-                  {lead.groups && lead.groups.length > 0 && (
-                    <div className="pt-1">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-                        Regu Dampingan:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+                      Regu Binaan:
+                    </span>
+                    {lead.groups && lead.groups.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
                         {lead.groups.map((g: any) => (
                           <span
                             key={g.id}
-                            className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-700"
+                            className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200/60 text-[11px] font-bold text-emerald-800"
                           >
                             {g.name}
                           </span>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Belum ada regu binaan</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -289,6 +292,44 @@ export function LeadersClientView({ initialLeaders, canEdit }: LeadersClientView
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Regu / Sangga Binaan
+                </label>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  Pilih satu atau beberapa regu yang dibina oleh pembina ini:
+                </p>
+                {availableGroups.length > 0 ? (
+                  <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-2.5 space-y-1.5 bg-slate-50/50">
+                    {availableGroups.map((g: any) => {
+                      const isAssignedToThis = editingLeader?.groups?.some((lg: any) => lg.id === g.id);
+                      return (
+                        <label
+                          key={g.id}
+                          className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer transition-colors text-xs text-slate-800"
+                        >
+                          <input
+                            type="checkbox"
+                            name="groupIds"
+                            value={g.id}
+                            defaultChecked={isAssignedToThis}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-600 border-slate-300"
+                          />
+                          <span className="font-semibold">{g.name}</span>
+                          <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                            {g.category}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    Belum ada regu yang terdaftar di sistem.
+                  </p>
+                )}
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">

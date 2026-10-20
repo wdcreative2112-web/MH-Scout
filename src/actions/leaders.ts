@@ -26,6 +26,8 @@ export async function createLeaderAction(formData: FormData) {
     return { success: false, error: parsed.error.errors[0]?.message };
   }
 
+  const groupIds = (formData.getAll("groupIds") as string[]).filter(Boolean);
+
   try {
     const leader = await prisma.leader.create({
       data: {
@@ -39,6 +41,13 @@ export async function createLeaderAction(formData: FormData) {
       },
     });
 
+    if (groupIds.length > 0) {
+      await prisma.scoutGroup.updateMany({
+        where: { id: { in: groupIds } },
+        data: { leaderId: leader.id },
+      });
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: session.id,
@@ -51,6 +60,8 @@ export async function createLeaderAction(formData: FormData) {
 
     revalidatePath("/dashboard/leaders");
     revalidatePath("/dashboard/groups");
+    revalidatePath("/profil");
+    revalidatePath("/");
     return { success: true, data: leader };
   } catch {
     return { success: false, error: "Gagal menyimpan pembina." };
@@ -78,6 +89,8 @@ export async function updateLeaderAction(id: string, formData: FormData) {
     return { success: false, error: parsed.error.errors[0]?.message };
   }
 
+  const groupIds = (formData.getAll("groupIds") as string[]).filter(Boolean);
+
   try {
     const leader = await prisma.leader.update({
       where: { id },
@@ -92,7 +105,43 @@ export async function updateLeaderAction(id: string, formData: FormData) {
       },
     });
 
+    // 1. Unlink groups that were previously led by this leader but are not in the new groupIds
+    await prisma.scoutGroup.updateMany({
+      where: {
+        leaderId: id,
+        id: { notIn: groupIds },
+      },
+      data: {
+        leaderId: null,
+      },
+    });
+
+    // 2. Link selected groups to this leader
+    if (groupIds.length > 0) {
+      await prisma.scoutGroup.updateMany({
+        where: {
+          id: { in: groupIds },
+        },
+        data: {
+          leaderId: id,
+        },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "UBAH_PEMBINA",
+        module: "PEMBINA",
+        details: `Memperbarui pembina: ${leader.name} (${leader.position})`,
+      },
+    }).catch(() => {});
+
     revalidatePath("/dashboard/leaders");
+    revalidatePath("/dashboard/groups");
+    revalidatePath("/profil");
+    revalidatePath("/");
     return { success: true, data: leader };
   } catch {
     return { success: false, error: "Gagal memperbarui data pembina." };

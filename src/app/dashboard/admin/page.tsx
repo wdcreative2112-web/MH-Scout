@@ -182,10 +182,10 @@ export default async function AdminDashboardPage() {
           </div>
           <p className="text-2xl sm:text-3xl font-black text-slate-900">{leadersCount}</p>
           <Link
-            href="/dashboard/leaders"
+            href="/dashboard/structure"
             className="text-xs font-semibold text-sky-700 hover:text-sky-800 inline-flex items-center gap-1"
           >
-            <span>Daftar pembina &rarr;</span>
+            <span>Struktur & Pembina &rarr;</span>
           </Link>
         </div>
 

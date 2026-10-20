@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogIn, ChevronRight, BookOpen, Newspaper, Image as ImageIcon, Info, Sparkles, Heart } from "lucide-react";
+import { Menu, X, LogIn, ChevronRight, BookOpen, Newspaper, Image as ImageIcon, Info, Sparkles, Heart, Network, Shield } from "lucide-react";
 
 export function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -21,6 +21,8 @@ export function PublicNavbar() {
   const navLinks = [
     { name: "Beranda", href: "/" },
     { name: "Profil", href: "/profil", icon: Info },
+    { name: "Struktur", href: "/struktur", icon: Network },
+    { name: "Regu", href: "/regu", icon: Shield },
     { name: "Berita", href: "/berita", icon: Newspaper },
     { name: "Artikel", href: "/artikel", icon: BookOpen },
     { name: "Galeri", href: "/galeri", icon: ImageIcon },

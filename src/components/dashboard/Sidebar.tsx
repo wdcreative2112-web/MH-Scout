@@ -24,6 +24,7 @@ import {
   ChevronRight,
   ExternalLink,
   Heart,
+  Network,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -89,9 +90,9 @@ export function DashboardSidebar({ session, onCloseMobile }: SidebarProps) {
           show: role === "ADMIN" || role === "SEKRETARIS",
         },
         {
-          name: "Pembina Satuan",
-          href: "/dashboard/leaders",
-          icon: Award,
+          name: "Struktur Organisasi",
+          href: "/dashboard/structure",
+          icon: Network,
           show: role === "ADMIN" || role === "SEKRETARIS",
         },
         {

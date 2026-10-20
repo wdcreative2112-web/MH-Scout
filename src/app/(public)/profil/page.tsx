@@ -1,26 +1,32 @@
-import React from "react";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
-import { ShieldCheck, Target, Heart, Award, Users, MapPin, Mail, Phone, Building, UserCheck } from "lucide-react";
+import { StructureOrgChart } from "@/components/public/StructureOrgChart";
+import { Target, Heart, Award, MapPin, Mail, Phone, Building, Network, ArrowRight, Shield } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilPage() {
   let profile = null;
-  let leaders: any[] = [];
 
   try {
     profile = await prisma.organizationProfile.findFirst();
-    leaders = await prisma.leader.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" },
-    });
   } catch {
     // DB fallback
   }
 
-  const name = profile?.name || "Gugus Depan MH SCOUT";
-  const pangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";
+  let name = profile?.name || "Gugus Depan MH SCOUT";
+  let pangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";
+
+  let structure: any[] = [];
+  if (profile?.structure) {
+    try {
+      const parsed = JSON.parse(profile.structure);
+      if (Array.isArray(parsed)) {
+        structure = parsed;
+      }
+    } catch {}
+  }
   const description =
     profile?.description ||
     "MH SCOUT adalah wadah pembinaan kepramukaan yang bertekad membentuk generasi muda Indonesia yang beriman, bertakwa, berakhlak mulia, berjiwa patriotik, taat hukum, disiplin, menjunjung tinggi nilai-nilai luhur bangsa, serta memiliki kecakapan hidup.";
@@ -110,75 +116,65 @@ export default async function ProfilPage() {
         </div>
       </ScrollReveal>
 
-      {/* 4. Pembina Gugus Depan with Glossy Profile Cards */}
+      {/* 4. Struktur Kepengurusan Gugus Depan */}
       <div className="space-y-6">
         <ScrollReveal direction="up" delayMs={60}>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100/70 text-emerald-900 border border-emerald-200">
-              <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Majelis Pembimbing & Pembina</span>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100/70 text-emerald-900 border border-emerald-200">
+                <Network className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Bagan Organisasi Resmi</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1.5">
+                Struktur Kepengurusan
+              </h2>
+              <p className="text-slate-600 text-xs sm:text-sm mt-1">
+                Bagan kepengurusan pangkalan yang mengemban amanah pembinaan kepramukaan.
+              </p>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1.5">Pembina Satuan</h2>
-            <p className="text-slate-600 text-xs sm:text-sm mt-1">
-              Para pembina berdedikasi yang membimbing dan mendampingi adik-adik pramuka dalam setiap proses pembinaan.
-            </p>
+
+            <Link
+              href="/struktur"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline shrink-0"
+            >
+              <span>Buka Halaman Struktur Lengkap</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-          {leaders.length > 0 ? (
-            leaders.map((leader, idx) => (
-              <ScrollReveal key={leader.id} direction="up" delayMs={idx * 100 + 80}>
-                <div
-                  className="glossy-card rounded-2xl p-5 sm:p-6 flex items-center gap-4 group hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0 font-black text-xl shadow-xs overflow-hidden">
-                    {leader.photo ? (
-                      <img src={leader.photo} alt={leader.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      leader.name.charAt(0)
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate">{leader.name}</h3>
-                    <p className="text-xs font-semibold text-emerald-700 mt-0.5 truncate">{leader.position}</p>
-                    {leader.nip && (
-                      <span className="inline-block text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-1.5 border border-slate-200">
-                        NTA: {leader.nip}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </ScrollReveal>
-            ))
-          ) : (
-            [
-              { name: "Kak Budi Santoso, S.Pd", role: "Ketua Gugus Depan (Ka Gudep)", nta: "01.001.001" },
-              { name: "Kak Siti Rahmawati, S.Pd", role: "Pembina Satuan Putri", nta: "01.002.002" },
-              { name: "Kak Hendra Wijaya", role: "Pembina Satuan Putra", nta: "01.001.003" },
-            ].map((lead, idx) => (
-              <ScrollReveal key={idx} direction="up" delayMs={idx * 100 + 80}>
-                <div
-                  className="glossy-card rounded-2xl p-5 sm:p-6 flex items-center gap-4 group hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0 font-bold text-lg shadow-xs">
-                    <Users className="w-6 h-6 text-emerald-700" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate">{lead.name}</h3>
-                    <p className="text-xs font-semibold text-emerald-700 mt-0.5 truncate">{lead.role}</p>
-                    <span className="inline-block text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-1.5 border border-slate-200">
-                      NTA: {lead.nta}
-                    </span>
-                  </div>
-                </div>
-              </ScrollReveal>
-            ))
-          )}
-        </div>
+        <ScrollReveal direction="up" delayMs={80}>
+          <StructureOrgChart sections={structure} />
+        </ScrollReveal>
       </div>
 
-      {/* 5. Kontak & Sekretariat */}
+      {/* 5. Banner Showcase Regu & Sangga Kepanduan */}
+      <ScrollReveal direction="up" delayMs={90}>
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-950 via-[#0d2a1f] to-emerald-900 p-6 sm:p-8 text-white shadow-xl border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-900/80 text-emerald-300 border border-emerald-500/30">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Satuan & Perindukan</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight">
+              Regu & Sangga Kepanduan
+            </h3>
+            <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
+              Lihat seluruh regu penggalang dan perindukan siaga lengkap dengan pembina pendamping, ketua regu (pinru), serta anggota aktif.
+            </p>
+          </div>
+
+          <Link
+            href="/regu"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs sm:text-sm transition-all shadow-md shrink-0 cursor-pointer active:scale-95"
+          >
+            <span>Buka Data Regu & Anggota</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </ScrollReveal>
+
+      {/* 6. Kontak & Sekretariat */}
       <ScrollReveal direction="up" delayMs={100}>
         <div className="glossy-panel rounded-3xl p-6 sm:p-10 border border-white/90 space-y-6">
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">

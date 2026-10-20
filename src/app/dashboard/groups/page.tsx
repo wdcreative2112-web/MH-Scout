@@ -17,6 +17,21 @@ export default async function GroupsPage() {
       orderBy: { name: "asc" },
       include: {
         leader: true,
+        members: {
+          where: { status: "AKTIF" },
+          orderBy: { fullName: "asc" },
+          select: {
+            id: true,
+            fullName: true,
+            memberNumber: true,
+            gender: true,
+            scoutLevel: true,
+            classGrade: true,
+            status: true,
+            phone: true,
+            avatar: true,
+          },
+        },
         _count: {
           select: { members: { where: { status: "AKTIF" } } },
         },
@@ -35,7 +50,11 @@ export default async function GroupsPage() {
 
   return (
     <div className="space-y-6">
-      <GroupsClientView initialGroups={groups} leaders={leaders} canEdit={canEdit} />
+      <GroupsClientView
+        initialGroups={JSON.parse(JSON.stringify(groups))}
+        leaders={JSON.parse(JSON.stringify(leaders))}
+        canEdit={canEdit}
+      />
     </div>
   );
 }
