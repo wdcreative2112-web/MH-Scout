@@ -10,6 +10,7 @@ export interface RoutineScheduleConfig {
   location: string;
   titleTemplate: string;
   isActive: boolean;
+  excludedDates?: string[]; // Tanggal YYYY-MM-DD yang dihapus manual agar tidak dibangkitkan ulang
 }
 
 export const DAY_NAMES = [
@@ -32,6 +33,7 @@ const DEFAULT_CONFIG: RoutineScheduleConfig = {
   location: "Lapangan Utama Pangkalan",
   titleTemplate: "Latihan Rutin",
   isActive: true,
+  excludedDates: [],
 };
 
 let _cachedScheduleConfig: RoutineScheduleConfig | null = null;
@@ -84,6 +86,22 @@ export async function saveRoutineScheduleConfig(
 }
 
 /**
+ * Catat tanggal yang telah dihapus agar syncRoutineMeetings tidak membangkitkan ulang sesi pada tanggal ini
+ */
+export async function addExcludedRoutineDate(dateStr: string): Promise<void> {
+  try {
+    const current = await getRoutineScheduleConfig();
+    const excluded = new Set(current.excludedDates || []);
+    excluded.add(dateStr);
+    await saveRoutineScheduleConfig({
+      excludedDates: Array.from(excluded),
+    });
+  } catch (err) {
+    console.warn("Notice: could not record excluded routine date:", err);
+  }
+}
+
+/**
  * Mendapatkan tanggal pertemuan rutin yang relevan (minggu berjalan dan 1 minggu ke depan)
  */
 export function getUpcomingRoutineDates(dayOfWeek: number, count: number = 2): Date[] {
@@ -94,8 +112,7 @@ export function getUpcomingRoutineDates(dayOfWeek: number, count: number = 2): D
   // Cari tanggal terdekat berikutnya yang memiliki dayOfWeek yang sama
   let daysUntil = (dayOfWeek - today.getDay() + 7) % 7;
 
-  // Jika hari ini belum hari yang dipilih, tapi dalam 3 hari ke belakang ada hari yang dimaksud (misal kemarin Minggu belum dibuat),
-  // kita juga bisa cek. Tapi yang utama adalah tanggal hari H atau terdekat mendatang:
+  // Tanggal hari H atau terdekat mendatang:
   for (let i = 0; i < count; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + daysUntil + i * 7);
@@ -119,10 +136,17 @@ export async function syncRoutineMeetings(
       return { createdCount: 0 };
     }
 
+    const excluded = new Set(config.excludedDates || []);
     const targetDates = getUpcomingRoutineDates(config.dayOfWeek, 2);
     let createdCount = 0;
 
     for (const targetDate of targetDates) {
+      const d = targetDate;
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (excluded.has(dateKey)) {
+        continue;
+      }
+
       const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
       const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
 

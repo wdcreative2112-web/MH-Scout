@@ -5,5 +5,8 @@
   "endTime": "16:30",
   "location": "Lapangan Utama Pangkalan",
   "titleTemplate": "Latihan Rutin",
-  "isActive": true
+  "isActive": true,
+  "excludedDates": [
+    "2026-10-28"
+  ]
 }

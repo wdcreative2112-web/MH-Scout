@@ -5,6 +5,8 @@ import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { StructureOrgChart } from "@/components/public/StructureOrgChart";
 import { Network, Building, ArrowLeft, ShieldCheck } from "lucide-react";
 
+import { mergeStructureWithTemplate } from "@/lib/structure-constants";
+
 export const dynamic = "force-dynamic";
 
 export default async function PublicStructurePage() {
@@ -20,10 +22,11 @@ export default async function PublicStructurePage() {
 
     const groupMap = new Map(groups.map((g) => [g.id, g.name]));
 
+    let parsedStructure: any[] = [];
     if (profile?.structure) {
       const parsed = JSON.parse(profile.structure);
       if (Array.isArray(parsed)) {
-        structure = parsed.map((sec: any) => ({
+        parsedStructure = parsed.map((sec: any) => ({
           ...sec,
           members: Array.isArray(sec.members)
             ? sec.members.map((m: any) => {
@@ -40,6 +43,7 @@ export default async function PublicStructurePage() {
         }));
       }
     }
+    structure = mergeStructureWithTemplate(parsedStructure);
   } catch {}
 
   const pangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";

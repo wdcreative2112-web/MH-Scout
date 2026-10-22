@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ meetingId?: string; reguId?: string; mode?: string }>;
+  searchParams: Promise<{ meetingId?: string; reguId?: string; mode?: string; tab?: string }>;
 }) {
   const session = await getSession();
-  const { meetingId, reguId, mode } = await searchParams;
+  const { meetingId, reguId, mode, tab } = await searchParams;
 
   let meetings: any[] = [];
   let members: any[] = [];
@@ -107,13 +107,20 @@ export default async function AttendancePage({
       return mDay.getTime() === today.getTime();
     });
 
+    const isKetuaRegu = session?.role === "KETUA_REGU";
+    const userGroupId = session?.groupId || "";
+    const canEdit = session?.role === "ADMIN" || session?.role === "SEKRETARIS" || isKetuaRegu;
+
     const targetMeetingId = meetingId || (todayMeeting ? todayMeeting.id : (meetings.length > 0 ? meetings[0].id : null));
 
     if (targetMeetingId) {
       activeMeeting = meetings.find((m) => m.id === targetMeetingId) || null;
       if (activeMeeting) {
         currentMeetingRecords = await prisma.attendanceRecord.findMany({
-          where: { meetingId: activeMeeting.id },
+          where: {
+            meetingId: activeMeeting.id,
+            ...(isKetuaRegu && userGroupId ? { member: { groupId: userGroupId } } : {}),
+          },
           include: { member: true },
         });
 
@@ -124,42 +131,138 @@ export default async function AttendancePage({
         });
       }
     }
+
+    // Query Denda Absensi (Alpa)
+    let fineDuesType = await prisma.duesType.findFirst({
+      where: { name: "Denda Absensi (Alpa)" },
+    });
+
+    if (!fineDuesType) {
+      fineDuesType = await prisma.duesType.create({
+        data: {
+          name: "Denda Absensi (Alpa)",
+          amount: 5000,
+          period: "INSIDENTAL",
+          description: "Denda ketidakhadiran tanpa keterangan (Alpa) pada latihan mingguan.",
+        },
+      }).catch(() => null);
+    }
+
+    let fines: any[] = [];
+    if (fineDuesType) {
+      const rawFines = await prisma.memberDues.findMany({
+        where: { duesTypeId: fineDuesType.id },
+        include: {
+          member: {
+            include: { group: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      fines = rawFines.map((f) => ({
+        id: f.id,
+        memberId: f.memberId,
+        memberName: f.member.fullName,
+        memberNumber: f.member.memberNumber,
+        groupId: f.member.groupId || "",
+        groupName: f.member.group?.name || "-",
+        periodName: f.periodName,
+        amount: Number(f.amount),
+        amountPaid: Number(f.amountPaid),
+        status: f.status,
+        paidAt: f.paidAt ? f.paidAt.toISOString() : null,
+        createdAt: f.createdAt.toISOString(),
+        notes: f.notes,
+      }));
+    }
+
+    const fineAmount = fineDuesType ? Number(fineDuesType.amount) : 5000;
+
+    // If Ketua Regu, filter members to their regu only
+    const filteredMembers = isKetuaRegu && userGroupId
+      ? members.filter((m) => m.groupId === userGroupId)
+      : members;
+
+    // Filter fines for Ketua Regu
+    const filteredFines = isKetuaRegu && userGroupId
+      ? fines.filter((f) => f.groupId === userGroupId)
+      : fines;
+
+    // Query Surat Izin Ketidakhadiran (Leave Requests)
+    const rawLeaveLetters = await prisma.letter.findMany({
+      where: {
+        notes: { contains: "isAttendanceLeave" },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const leaveRequests = rawLeaveLetters.map((l) => {
+      let parsed: any = {};
+      try {
+        parsed = l.notes ? JSON.parse(l.notes) : {};
+      } catch {}
+      return {
+        id: l.id,
+        letterNumber: l.letterNumber,
+        subject: l.subject,
+        status: l.status,
+        date: l.date.toISOString(),
+        meetingId: parsed.meetingId || "",
+        memberId: parsed.memberId || "",
+        memberName: parsed.memberName || "",
+        memberNumber: parsed.memberNumber || "",
+        groupId: parsed.groupId || "",
+        groupName: parsed.groupName || "",
+        permitType: (parsed.permitType as "IZIN" | "SAKIT") || "IZIN",
+        reason: parsed.reason || l.summary || "",
+        parentName: parsed.parentName || "",
+        statusApproval: parsed.statusApproval || (l.status === "DITERIMA" ? "DISETUJUI" : l.status === "DITOLAK" ? "DITOLAK" : "MENUNGGU"),
+        submittedByName: parsed.submittedByName || "",
+        submittedAt: parsed.submittedAt || l.createdAt.toISOString(),
+      };
+    });
+
+    // Filter leave requests for Ketua Regu
+    const filteredLeaveRequests = isKetuaRegu && userGroupId
+      ? leaveRequests.filter((lr) => lr.groupId === userGroupId)
+      : leaveRequests;
+
+    return (
+      <div className="space-y-6">
+        <AttendanceClientView
+          meetings={meetings}
+          members={filteredMembers}
+          allMembers={members}
+          groups={groups}
+          activeMeeting={activeMeeting}
+          currentRecords={currentMeetingRecords}
+          canEdit={canEdit}
+          userRole={session?.role || "GUEST"}
+          isKetuaRegu={isKetuaRegu}
+          userGroupId={userGroupId}
+          userGroupName={session?.groupName || null}
+          initialMode={isKetuaRegu ? "REGU" : ((mode as "ALL" | "REGU") || "ALL")}
+          initialReguId={isKetuaRegu ? userGroupId : (reguId || "")}
+          routineConfig={routineConfig}
+          initialFines={filteredFines}
+          initialFineAmount={fineAmount}
+          initialLeaveRequests={filteredLeaveRequests}
+          initialTab={isKetuaRegu ? "SHEET" : (tab ? (tab.toUpperCase() as any) : "MENU")}
+          lastAuditLog={lastAuditLog ? {
+            userName: lastAuditLog.changedBy?.name || "Pengurus",
+            userRole: lastAuditLog.changedBy?.role || "PENGURUS",
+            createdAt: lastAuditLog.createdAt.toISOString(),
+          } : null}
+        />
+      </div>
+    );
   } catch {
     // DB fallback
+    return (
+      <div className="p-6 text-center text-sm text-slate-500">
+        Gagal memuat data presensi. Silakan periksa koneksi database.
+      </div>
+    );
   }
-
-  const isKetuaRegu = session?.role === "KETUA_REGU";
-  const userGroupId = session?.groupId || "";
-  const canEdit = session?.role === "ADMIN" || session?.role === "SEKRETARIS" || isKetuaRegu;
-
-  // If Ketua Regu, filter members to their regu only
-  const filteredMembers = isKetuaRegu && userGroupId
-    ? members.filter((m) => m.groupId === userGroupId)
-    : members;
-
-  return (
-    <div className="space-y-6">
-      <AttendanceClientView
-        meetings={meetings}
-        members={filteredMembers}
-        allMembers={members}
-        groups={groups}
-        activeMeeting={activeMeeting}
-        currentRecords={currentMeetingRecords}
-        canEdit={canEdit}
-        userRole={session?.role || "GUEST"}
-        isKetuaRegu={isKetuaRegu}
-        userGroupId={userGroupId}
-        userGroupName={session?.groupName || null}
-        initialMode={isKetuaRegu ? "REGU" : ((mode as "ALL" | "REGU") || "ALL")}
-        initialReguId={isKetuaRegu ? userGroupId : (reguId || "")}
-        routineConfig={routineConfig}
-        lastAuditLog={lastAuditLog ? {
-          userName: lastAuditLog.changedBy?.name || "Pengurus",
-          userRole: lastAuditLog.changedBy?.role || "PENGURUS",
-          createdAt: lastAuditLog.createdAt.toISOString(),
-        } : null}
-      />
-    </div>
-  );
 }

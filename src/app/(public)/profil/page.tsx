@@ -4,6 +4,8 @@ import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { StructureOrgChart } from "@/components/public/StructureOrgChart";
 import { Target, Heart, Award, MapPin, Mail, Phone, Building, Network, ArrowRight, Shield } from "lucide-react";
 
+import { mergeStructureWithTemplate } from "@/lib/structure-constants";
+
 export const dynamic = "force-dynamic";
 
 export default async function ProfilPage() {
@@ -18,15 +20,16 @@ export default async function ProfilPage() {
   let name = profile?.name || "Gugus Depan MH SCOUT";
   let pangkalan = profile?.pangkalan || "Pangkalan Gerakan Pramuka";
 
-  let structure: any[] = [];
+  let parsedStructure: any[] = [];
   if (profile?.structure) {
     try {
       const parsed = JSON.parse(profile.structure);
       if (Array.isArray(parsed)) {
-        structure = parsed;
+        parsedStructure = parsed;
       }
     } catch {}
   }
+  const structure = mergeStructureWithTemplate(parsedStructure);
   const description =
     profile?.description ||
     "MH SCOUT adalah wadah pembinaan kepramukaan yang bertekad membentuk generasi muda Indonesia yang beriman, bertakwa, berakhlak mulia, berjiwa patriotik, taat hukum, disiplin, menjunjung tinggi nilai-nilai luhur bangsa, serta memiliki kecakapan hidup.";

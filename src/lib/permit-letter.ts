@@ -22,6 +22,8 @@ export interface PermitLetterData {
   leaderName: string;
   leaderNip?: string;
   createdPlace: string;
+  isAttendanceLeave?: boolean;
+  statusApproval?: string;
   notes?: string;
 }
 
@@ -83,6 +85,8 @@ export function parsePermitLetter(letter: any): PermitLetterData | null {
         leaderName: parsed.leaderName || "Pembina Gugus Depan",
         leaderNip: parsed.leaderNip || "-",
         createdPlace: parsed.createdPlace || "Jakarta",
+        isAttendanceLeave: !!parsed.isAttendanceLeave,
+        statusApproval: parsed.statusApproval || (letter.status === "DITERIMA" ? "DISETUJUI" : letter.status === "DITOLAK" ? "DITOLAK" : "MENUNGGU"),
         notes: parsed.notes || "",
       };
     }

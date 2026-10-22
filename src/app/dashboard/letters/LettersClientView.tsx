@@ -6,6 +6,8 @@ import {
   createLetterAction,
   updateLetterAction,
   deleteLetterAction,
+  approveLeavePermitAction,
+  rejectLeavePermitAction,
 } from "@/actions/letters";
 import { formatDate } from "@/lib/utils";
 import {
@@ -26,6 +28,7 @@ import {
   HeartHandshake,
   UserCheck,
   FileCheck2,
+  Check,
 } from "lucide-react";
 import {
   parsePermitLetter,
@@ -178,11 +181,77 @@ export function LettersClientView({
     }
   };
 
+  const [approvalLoadingId, setApprovalLoadingId] = useState<string | null>(null);
+
+  const handleApproveLeave = async (letterId: string, memberName: string) => {
+    if (
+      !confirm(
+        `Setujui permohonan izin untuk ${memberName}? Status presensi latihan anggota ini akan otomatis disesuaikan menjadi IZIN/SAKIT dan tagihan denda alpa akan dibatalkan.`
+      )
+    ) {
+      return;
+    }
+    setApprovalLoadingId(letterId);
+    setError(null);
+    try {
+      const res = await approveLeavePermitAction(letterId);
+      if (!res.success) {
+        setError(res.error || "Gagal menyetujui izin.");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+    } finally {
+      setApprovalLoadingId(null);
+    }
+  };
+
+  const handleRejectLeave = async (letterId: string, memberName: string) => {
+    const reason = prompt(
+      `Masukkan alasan penolakan izin untuk ${memberName}:`,
+      "Permohonan tidak memenuhi syarat perizinan"
+    );
+    if (reason === null) return;
+    setApprovalLoadingId(letterId);
+    setError(null);
+    try {
+      const res = await rejectLeavePermitAction(letterId, reason);
+      if (!res.success) {
+        setError(res.error || "Gagal menolak izin.");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+    } finally {
+      setApprovalLoadingId(null);
+    }
+  };
+
+  const pendingLeaveCount = initialLetters.filter((l) => {
+    const p = parsePermitLetter(l);
+    return (
+      p &&
+      p.isAttendanceLeave &&
+      (l.status === "MENUNGGU" || p.statusApproval === "MENUNGGU")
+    );
+  }).length;
+
   const filtered = initialLetters.filter((l) => {
-    const isPermit = parsePermitLetter(l) !== null;
+    const permitData = parsePermitLetter(l);
+    const isPermit = permitData !== null;
     let match = true;
 
-    if (typeFilter === "IZIN") {
+    if (typeFilter === "MENUNGGU_IZIN") {
+      if (
+        !isPermit ||
+        !permitData?.isAttendanceLeave ||
+        (l.status !== "MENUNGGU" && permitData?.statusApproval !== "MENUNGGU")
+      ) {
+        match = false;
+      }
+    } else if (typeFilter === "IZIN") {
       if (!isPermit) match = false;
     } else if (typeFilter === "MASUK") {
       if (l.type !== "MASUK") match = false;
@@ -270,6 +339,21 @@ export function LettersClientView({
             <UserCheck className="w-3.5 h-3.5" />
             <span>Surat Izin Anggota ({permitLettersCount})</span>
           </button>
+
+          {pendingLeaveCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setTypeFilter("MENUNGGU_IZIN")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                typeFilter === "MENUNGGU_IZIN"
+                  ? "bg-amber-600 text-white shadow-xs font-black"
+                  : "bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300 animate-pulse font-bold"
+              }`}
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+              <span>Izin Menunggu ({pendingLeaveCount})</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -396,6 +480,34 @@ export function LettersClientView({
                       </span>
                     </div>
                   </div>
+
+                  {/* Mobile Approval / Rejection Action for Leave Permit */}
+                  {canEdit && isPermit && permitData?.isAttendanceLeave && (l.status === "MENUNGGU" || permitData.statusApproval === "MENUNGGU") && (
+                    <div className="pt-2.5 pb-1 border-t border-slate-100 flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={approvalLoadingId === l.id}
+                        onClick={() => handleApproveLeave(l.id, permitData.memberName)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-98 transition-all"
+                      >
+                        {approvalLoadingId === l.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>Setujui</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={approvalLoadingId === l.id}
+                        onClick={() => handleRejectLeave(l.id, permitData.memberName)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-98 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Tolak</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Action Footer */}
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
@@ -560,22 +672,73 @@ export function LettersClientView({
 
                       {/* Status */}
                       <td className="p-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            l.status === "DIKIRIM" || l.status === "DITERIMA"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : l.status === "DIARSIPKAN"
-                              ? "bg-slate-100 text-slate-600"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {l.status}
-                        </span>
+                        {isPermit && permitData?.isAttendanceLeave ? (
+                          <div className="space-y-1">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                                l.status === "DITERIMA" || permitData.statusApproval === "DISETUJUI"
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  : l.status === "DITOLAK" || permitData.statusApproval === "DITOLAK"
+                                  ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                  : "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
+                              }`}
+                            >
+                              {l.status === "DITERIMA" || permitData.statusApproval === "DISETUJUI"
+                                ? "✓ Disetujui (Presensi Sesuai)"
+                                : l.status === "DITOLAK" || permitData.statusApproval === "DITOLAK"
+                                ? "✗ Ditolak (Alpa)"
+                                : "⏳ Menunggu Persetujuan"}
+                            </span>
+                            <span className="block text-[10px] text-slate-400 font-medium">
+                              Tipe: {permitData.permitType === "SAKIT" ? "Sakit" : "Izin"}
+                            </span>
+                          </div>
+                        ) : (
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              l.status === "DIKIRIM" || l.status === "DITERIMA"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : l.status === "DIARSIPKAN"
+                                ? "bg-slate-100 text-slate-600"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {l.status}
+                          </span>
+                        )}
                       </td>
 
                       {/* Aksi & Dokumen */}
                       <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {canEdit && isPermit && permitData?.isAttendanceLeave && (l.status === "MENUNGGU" || permitData.statusApproval === "MENUNGGU") && (
+                            <div className="flex items-center gap-1 mr-1">
+                              <button
+                                type="button"
+                                disabled={approvalLoadingId === l.id}
+                                onClick={() => handleApproveLeave(l.id, permitData.memberName)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
+                                title="Setujui permohonan izin ini & otomatis ubah status presensi latihan menjadi Izin/Sakit"
+                              >
+                                {approvalLoadingId === l.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="w-3.5 h-3.5" />
+                                )}
+                                <span>Setujui</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={approvalLoadingId === l.id}
+                                onClick={() => handleRejectLeave(l.id, permitData.memberName)}
+                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 disabled:opacity-50 cursor-pointer"
+                                title="Tolak izin (anggota yang tidak hadir akan berstatus Alpa & kena denda)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Tolak</span>
+                              </button>
+                            </div>
+                          )}
                           {isPermit && permitData ? (
                             <>
                               {/* Preview & Download PDF Button */}
@@ -943,6 +1106,46 @@ export function LettersClientView({
                 </div>
               )}
             </div>
+
+            {/* Decision Buttons for Attendance Leave in Detail Modal */}
+            {canEdit && (() => {
+              const dp = detailLetter.notes ? parsePermitLetter(detailLetter.notes) : null;
+              if (dp?.isAttendanceLeave && (detailLetter.status === "MENUNGGU" || dp.statusApproval === "MENUNGGU")) {
+                return (
+                  <div className="pt-2 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={approvalLoadingId === detailLetter.id}
+                      onClick={() => {
+                        handleApproveLeave(detailLetter.id, dp.memberName);
+                        setDetailLetter(null);
+                      }}
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      {approvalLoadingId === detailLetter.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5" />
+                      )}
+                      <span>Setujui Permohonan</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={approvalLoadingId === detailLetter.id}
+                      onClick={() => {
+                        handleRejectLeave(detailLetter.id, dp.memberName);
+                        setDetailLetter(null);
+                      }}
+                      className="flex-1 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Tolak Permohonan</span>
+                    </button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <div className="pt-2 flex gap-2">
               <button

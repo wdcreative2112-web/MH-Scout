@@ -346,4 +346,360 @@ export async function updatePermitLetterAction(id: string, formData: FormData) {
   }
 }
 
+/**
+ * Pengajuan Surat Izin/Sakit Ketidakhadiran dari Ketua Regu
+ */
+export async function submitLeavePermitAction(data: {
+  memberId: string;
+  meetingId: string;
+  permitType: "IZIN" | "SAKIT";
+  reason: string;
+  parentName?: string;
+  parentPhone?: string;
+}) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS" && session.role !== "KETUA_REGU") {
+    return { success: false, error: "Akses ditolak: Anda tidak memiliki wewenang mengajukan izin." };
+  }
+
+  const { memberId, meetingId, permitType, reason, parentName, parentPhone } = data;
+
+  if (!memberId || !meetingId || !permitType || !reason?.trim()) {
+    return { success: false, error: "Data permohonan izin belum lengkap." };
+  }
+
+  // Security check for Ketua Regu
+  if (session.role === "KETUA_REGU") {
+    if (!session.groupId) {
+      return { success: false, error: "Akun Anda belum terhubung dengan regu manapun." };
+    }
+    const memberCheck = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: { groupId: true },
+    });
+    if (!memberCheck || memberCheck.groupId !== session.groupId) {
+      return { success: false, error: "Akses ditolak: Anda hanya dapat mengajukan izin untuk anggota regu Anda." };
+    }
+  }
+
+  try {
+    const [member, meeting, letterCount] = await Promise.all([
+      prisma.member.findUnique({
+        where: { id: memberId },
+        include: { group: true },
+      }),
+      prisma.attendanceMeeting.findUnique({
+        where: { id: meetingId },
+      }),
+      prisma.letter.count(),
+    ]);
+
+    if (!member) return { success: false, error: "Anggota tidak ditemukan." };
+    if (!meeting) return { success: false, error: "Pertemuan latihan tidak ditemukan." };
+
+    const { generatePermitLetterNumber } = await import("@/lib/permit-letter");
+    const letterNumber = generatePermitLetterNumber(letterCount, new Date(meeting.meetingDate));
+
+    const structuredNotes = JSON.stringify({
+      isPermitLetter: true,
+      isAttendanceLeave: true,
+      permitType,
+      memberId: member.id,
+      memberName: member.fullName,
+      memberNumber: member.memberNumber || "-",
+      groupId: member.groupId || "",
+      groupName: member.group?.name || "-",
+      meetingId: meeting.id,
+      meetingTitle: meeting.title,
+      meetingDate: meeting.meetingDate.toISOString(),
+      reason: reason.trim(),
+      parentName: parentName?.trim() || "Orang Tua / Wali",
+      parentPhone: parentPhone?.trim() || "",
+      statusApproval: "MENUNGGU",
+      submittedById: session.id,
+      submittedByName: session.name,
+      submittedAt: new Date().toISOString(),
+    });
+
+    const subject = `Permohonan Izin ${permitType === "SAKIT" ? "Sakit" : "Tidak Hadir"} - ${member.fullName} (${member.group?.name || "Pramuka"})`;
+    const summary = `Permohonan izin ${permitType === "SAKIT" ? "sakit" : "tidak hadir"} untuk anggota ${member.fullName} (${member.memberNumber || "-"}, Regu ${member.group?.name || "-"}) pada sesi latihan "${meeting.title}". Alasan: ${reason.trim()}`;
+
+    const letter = await prisma.letter.create({
+      data: {
+        letterNumber,
+        type: "MASUK",
+        date: new Date(meeting.meetingDate),
+        subject,
+        sender: `Orang Tua / Wali (${parentName?.trim() || "Wali Murid"}) melalui Ketua Regu`,
+        recipient: "Pembina & Sekretaris Gugus Depan",
+        summary,
+        status: "MENUNGGU",
+        notes: structuredNotes,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "AJUKAN_IZIN_ANGGOTA",
+        module: "ABSENSI",
+        details: `Mengajukan surat izin ${permitType}: ${letter.letterNumber} untuk ${member.fullName} (${meeting.title})`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/letters");
+    revalidatePath("/dashboard");
+    return { success: true, data: letter };
+  } catch (err: any) {
+    console.error("Submit leave permit error:", err);
+    return { success: false, error: "Gagal mengajukan surat izin anggota." };
+  }
+}
+
+/**
+ * Persetujuan Surat Izin oleh Admin / Sekretaris
+ * Otomatis memperbarui AttendanceRecord menjadi IZIN/SAKIT dan membatalkan denda Alpa jika ada.
+ */
+export async function approveLeavePermitAction(letterId: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak: Hanya Pembina/Admin dan Sekretaris yang berwenang menyetujui surat izin." };
+  }
+
+  try {
+    const letter = await prisma.letter.findUnique({
+      where: { id: letterId },
+    });
+    if (!letter) {
+      return { success: false, error: "Data surat permohonan izin tidak ditemukan." };
+    }
+
+    let parsedNotes: any = null;
+    try {
+      parsedNotes = letter.notes ? JSON.parse(letter.notes) : null;
+    } catch {}
+
+    if (!parsedNotes || !parsedNotes.isAttendanceLeave || !parsedNotes.memberId || !parsedNotes.meetingId) {
+      return { success: false, error: "Format surat permohonan izin tidak valid." };
+    }
+
+    const { memberId, meetingId, permitType, reason } = parsedNotes;
+    const finalStatus = permitType === "SAKIT" ? "SAKIT" : "IZIN";
+
+    // 1. Update Surat menjadi DITERIMA
+    const updatedNotes = JSON.stringify({
+      ...parsedNotes,
+      statusApproval: "DISETUJUI",
+      approvedById: session.id,
+      approvedByName: session.name,
+      approvedAt: new Date().toISOString(),
+    });
+
+    await prisma.letter.update({
+      where: { id: letterId },
+      data: {
+        status: "DITERIMA",
+        notes: updatedNotes,
+      },
+    });
+
+    // 2. Update AttendanceRecord anggota pada sesi latihan ini
+    const existingRecord = await prisma.attendanceRecord.findUnique({
+      where: {
+        meetingId_memberId: { meetingId, memberId },
+      },
+    });
+
+    if (existingRecord) {
+      await prisma.attendanceRecord.update({
+        where: { id: existingRecord.id },
+        data: {
+          status: finalStatus,
+          notes: `Izin Disetujui via Surat ${letter.letterNumber}: ${reason || ""}`,
+          recordedById: session.id,
+        },
+      });
+
+      await prisma.attendanceAuditLog.create({
+        data: {
+          meetingId,
+          memberId,
+          previousStatus: existingRecord.status,
+          newStatus: finalStatus,
+          changedById: session.id,
+          reason: `Persetujuan Surat Izin: ${letter.letterNumber}`,
+        },
+      }).catch(() => {});
+    } else {
+      await prisma.attendanceRecord.create({
+        data: {
+          meetingId,
+          memberId,
+          status: finalStatus,
+          notes: `Izin Disetujui via Surat ${letter.letterNumber}: ${reason || ""}`,
+          recordedById: session.id,
+        },
+      });
+
+      await prisma.attendanceAuditLog.create({
+        data: {
+          meetingId,
+          memberId,
+          previousStatus: "BELUM_DIISI",
+          newStatus: finalStatus,
+          changedById: session.id,
+          reason: `Persetujuan Surat Izin Awal: ${letter.letterNumber}`,
+        },
+      }).catch(() => {});
+    }
+
+    // 3. Batalkan/hapus tagihan denda Alpa yang belum lunas jika sebelumnya ada
+    try {
+      const { syncFinesForMeeting } = await import("@/actions/fines");
+      await syncFinesForMeeting(meetingId, [{ memberId, status: finalStatus }]);
+    } catch (e) {
+      console.error("Sync fine after leave approval error:", e);
+    }
+
+    // 4. Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "SETUJUI_SURAT_IZIN",
+        module: "SURAT",
+        details: `Menyetujui izin ${finalStatus} untuk ${parsedNotes.memberName}: ${letter.letterNumber}`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/letters");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Approve leave error:", err);
+    return { success: false, error: "Gagal memproses persetujuan izin." };
+  }
+}
+
+/**
+ * Penolakan Surat Izin oleh Admin / Sekretaris
+ * Otomatis menjadikan status anggota ALPA jika tidak hadir dan menerapkan denda Alpa.
+ */
+export async function rejectLeavePermitAction(letterId: string, rejectionReason?: string) {
+  const session = await requireAuth();
+  if (session.role !== "ADMIN" && session.role !== "SEKRETARIS") {
+    return { success: false, error: "Akses ditolak: Hanya Pembina/Admin dan Sekretaris yang berwenang menolak surat izin." };
+  }
+
+  try {
+    const letter = await prisma.letter.findUnique({
+      where: { id: letterId },
+    });
+    if (!letter) {
+      return { success: false, error: "Data surat permohonan izin tidak ditemukan." };
+    }
+
+    let parsedNotes: any = null;
+    try {
+      parsedNotes = letter.notes ? JSON.parse(letter.notes) : null;
+    } catch {}
+
+    if (!parsedNotes || !parsedNotes.isAttendanceLeave || !parsedNotes.memberId || !parsedNotes.meetingId) {
+      return { success: false, error: "Format surat permohonan izin tidak valid." };
+    }
+
+    const { memberId, meetingId } = parsedNotes;
+
+    // 1. Update Surat menjadi DITOLAK
+    const updatedNotes = JSON.stringify({
+      ...parsedNotes,
+      statusApproval: "DITOLAK",
+      rejectionReason: rejectionReason?.trim() || "Permohonan izin tidak disetujui / tidak memenuhi syarat",
+      rejectedById: session.id,
+      rejectedByName: session.name,
+      rejectedAt: new Date().toISOString(),
+    });
+
+    await prisma.letter.update({
+      where: { id: letterId },
+      data: {
+        status: "DITOLAK",
+        notes: updatedNotes,
+      },
+    });
+
+    // 2. Sesuaikan status presensi: Jika sebelumnya berstatus IZIN/SAKIT dari permohonan yang ditolak, ubah ke ALPA
+    const existingRecord = await prisma.attendanceRecord.findUnique({
+      where: {
+        meetingId_memberId: { meetingId, memberId },
+      },
+    });
+
+    if (existingRecord && existingRecord.status !== "HADIR") {
+      await prisma.attendanceRecord.update({
+        where: { id: existingRecord.id },
+        data: {
+          status: "ALPA",
+          notes: `Izin Ditolak: ${rejectionReason || "Tidak disetujui"}`,
+          recordedById: session.id,
+        },
+      });
+
+      await prisma.attendanceAuditLog.create({
+        data: {
+          meetingId,
+          memberId,
+          previousStatus: existingRecord.status,
+          newStatus: "ALPA",
+          changedById: session.id,
+          reason: `Surat Izin Ditolak (${letter.letterNumber}): ${rejectionReason || "-"}`,
+        },
+      }).catch(() => {});
+
+      // Sinkronkan denda alpa
+      try {
+        const { syncFinesForMeeting } = await import("@/actions/fines");
+        await syncFinesForMeeting(meetingId, [{ memberId, status: "ALPA" }]);
+      } catch {}
+    } else if (!existingRecord) {
+      await prisma.attendanceRecord.create({
+        data: {
+          meetingId,
+          memberId,
+          status: "ALPA",
+          notes: `Izin Ditolak: ${rejectionReason || "Tidak disetujui"}`,
+          recordedById: session.id,
+        },
+      });
+
+      try {
+        const { syncFinesForMeeting } = await import("@/actions/fines");
+        await syncFinesForMeeting(meetingId, [{ memberId, status: "ALPA" }]);
+      } catch {}
+    }
+
+    // 3. Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.id,
+        userName: session.name,
+        action: "TOLAK_SURAT_IZIN",
+        module: "SURAT",
+        details: `Menolak izin untuk ${parsedNotes.memberName}: ${letter.letterNumber} (${rejectionReason || "Tanpa alasan"})`,
+      },
+    }).catch(() => {});
+
+    revalidatePath("/dashboard/attendance");
+    revalidatePath("/dashboard/letters");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Reject leave error:", err);
+    return { success: false, error: "Gagal memproses penolakan izin." };
+  }
+}
+
 

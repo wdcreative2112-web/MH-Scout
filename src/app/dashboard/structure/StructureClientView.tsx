@@ -23,6 +23,7 @@ import {
   Check,
   ChevronDown,
   Layers,
+  Building2,
 } from "lucide-react";
 
 export interface MemberItem {
@@ -297,6 +298,7 @@ export function StructureClientView({
   const putriSections = sections.filter((s) => s.category === "PEMBINA PUTRI");
   const pembantuSections = sections.filter((s) => s.category === "PEMBANTU PEMBINA");
   const alumniSections = sections.filter((s) => s.category === "PERWAKILAN ALUMNI");
+  const mabigusSections = sections.filter((s) => s.category === "MABIGUS");
 
   return (
     <div className="space-y-6">
@@ -311,7 +313,7 @@ export function StructureClientView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href="/struktur"
             target="_blank"
@@ -334,7 +336,7 @@ export function StructureClientView({
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>{saving ? "Menyimpan ke Neon..." : "Simpan Perubahan"}</span>
+              <span>{saving ? "Menyimpan ke Database..." : "Simpan Struktur"}</span>
             </button>
           )}
         </div>
@@ -364,7 +366,7 @@ export function StructureClientView({
           <div>
             <h2 className="font-bold text-base text-slate-900">Pimpinan Inti Gugus Depan</h2>
             <p className="text-xs text-slate-500">
-              Ka. Mabigus, Ka. Gudep, Sekretaris, dan Bendahara pangkalan
+              Ka. Gudep, Sekretaris, dan Bendahara pangkalan
             </p>
           </div>
         </div>
@@ -520,20 +522,56 @@ export function StructureClientView({
         </div>
       </div>
 
-      {/* Bottom Save Button Bar */}
+      {/* 6. BAGIAN: MAJELIS PEMBIMBING GUGUS DEPAN (MABIGUS) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 space-y-6 shadow-2xs">
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+          <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
+            <Building2 className="w-5 h-5 text-teal-700" />
+          </div>
+          <div>
+            <h2 className="font-bold text-base text-slate-900">Majelis Pembimbing Gugus Depan (Mabigus)</h2>
+            <p className="text-xs text-slate-500">
+              Ketua Mabigus, Wakil I, Wakil II, Sekretaris, Bendahara, dan Anggota Mabigus
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {mabigusSections.map((sec) => (
+            <SectionCard
+              key={sec.id}
+              section={sec}
+              availableLeaders={availableLeaders}
+              availableGroups={availableGroups}
+              canEdit={canEdit}
+              onAddMember={() => handleAddMember(sec.id, sec.title)}
+              onUpdateMember={(mId, field, val) => handleUpdateMember(sec.id, mId, field, val)}
+              onToggleGroup={(mId, gId) => handleToggleGroup(sec.id, mId, gId)}
+              onRemoveMember={(mId) => handleRemoveMember(sec.id, mId)}
+              onPhotoUpload={(mId, e) => handlePhotoUpload(sec.id, mId, e)}
+              onAutofill={(mId, lId) => handleAutofillFromLeader(sec.id, mId, lId)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Save Bar (Static at bottom of page, no longer floating over forms) */}
       {canEdit && (
-        <div className="sticky bottom-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 p-4 shadow-xl flex items-center justify-between">
-          <p className="text-xs text-slate-600 font-medium">
-            Perubahan struktur & regu binaan akan otomatis terhubung ke manajemen regu dan website.
-          </p>
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+          <div className="space-y-1 text-center sm:text-left">
+            <h4 className="font-bold text-slate-900 text-sm">Simpan Seluruh Struktur Organisasi</h4>
+            <p className="text-xs text-slate-500">
+              Perubahan struktur, foto, dan regu binaan akan otomatis tersimpan ke database dan diperbarui di website.
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>{saving ? "Menyimpan ke Neon..." : "Simpan Struktur"}</span>
+            <span>{saving ? "Menyimpan ke Database..." : "Simpan Struktur"}</span>
           </button>
         </div>
       )}
@@ -683,15 +721,15 @@ function MemberCard({
       </div>
 
       {/* Upload Foto & Detail Pengurus */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
         {/* Frame Foto */}
-        <div className="flex flex-col items-center gap-1.5 shrink-0">
-          <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shadow-xs">
+        <div className="flex sm:flex-col items-center gap-2 shrink-0">
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-100 border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-xs shrink-0">
             {member.photo ? (
               <img
                 src={member.photo}
                 alt={member.name || "Foto Pengurus"}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-2xl"
               />
             ) : (
               <div className="text-center p-1">
@@ -716,20 +754,35 @@ function MemberCard({
             )}
           </div>
 
-          {canEdit && member.photo && (
-            <button
-              type="button"
-              onClick={() => onUpdateMember("photo", null)}
-              className="text-[10px] text-rose-500 hover:underline flex items-center gap-0.5"
-            >
-              <X className="w-2.5 h-2.5" />
-              <span>Hapus</span>
-            </button>
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              <label className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold cursor-pointer">
+                <Upload className="w-3 h-3" />
+                <span>{member.photo ? "Ganti" : "Upload"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={onPhotoUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {member.photo && (
+                <button
+                  type="button"
+                  onClick={() => onUpdateMember("photo", null)}
+                  className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold hover:underline flex items-center gap-0.5"
+                >
+                  <X className="w-2.5 h-2.5" />
+                  <span>Hapus</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
         {/* Field Input Nama & Jabatan */}
-        <div className="flex-1 space-y-2 min-w-0">
+        <div className="flex-1 w-full space-y-2.5 min-w-0">
           {canEdit && availableLeaders.length > 0 && (
             <div>
               <select
@@ -796,7 +849,7 @@ function MemberCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase">
                 NTA / NIP
@@ -807,7 +860,7 @@ function MemberCard({
                 value={member.nip || ""}
                 onChange={(e) => onUpdateMember("nip", e.target.value)}
                 placeholder="01.001.xxx"
-                className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-600 text-slate-700 bg-white disabled:bg-slate-50 font-mono text-[11px]"
+                className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-600 text-slate-700 bg-white disabled:bg-slate-50 font-mono text-[11px]"
               />
             </div>
             <div>
@@ -820,7 +873,7 @@ function MemberCard({
                 value={member.phone || ""}
                 onChange={(e) => onUpdateMember("phone", e.target.value)}
                 placeholder="0812xxxx"
-                className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-600 text-slate-700 bg-white disabled:bg-slate-50 text-[11px]"
+                className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-600 text-slate-700 bg-white disabled:bg-slate-50 text-[11px]"
               />
             </div>
           </div>

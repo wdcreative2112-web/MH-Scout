@@ -3,81 +3,9 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StructureClientView } from "./StructureClientView";
+import { DEFAULT_STRUCTURE_TEMPLATE } from "@/lib/structure-constants";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_STRUCTURE_TEMPLATE = [
-  {
-    id: "sec-mabigus",
-    category: "PIMPINAN",
-    title: "Ka. Mabigus",
-    subtitle: "Ketua Majelis Pembimbing Gugus Depan",
-    members: [],
-  },
-  {
-    id: "sec-gudep",
-    category: "PIMPINAN",
-    title: "Ka. Gudep",
-    subtitle: "Ketua Gugus Depan",
-    members: [],
-  },
-  {
-    id: "sec-sekretaris",
-    category: "PIMPINAN",
-    title: "Sekretaris",
-    subtitle: "Administrasi & Kesekretariatan",
-    members: [],
-  },
-  {
-    id: "sec-bendahara",
-    category: "PIMPINAN",
-    title: "Bendahara",
-    subtitle: "Keuangan & Aset Pangkalan",
-    members: [],
-  },
-  {
-    id: "sec-putra-siaga",
-    category: "PEMBINA PUTRA",
-    title: "Koordinator Siaga",
-    subtitle: "Pembinaan Satuan Siaga Putra",
-    members: [],
-  },
-  {
-    id: "sec-putra-penggalang",
-    category: "PEMBINA PUTRA",
-    title: "Koordinator Penggalang",
-    subtitle: "Pembinaan Satuan Penggalang Putra",
-    members: [],
-  },
-  {
-    id: "sec-putri-siaga",
-    category: "PEMBINA PUTRI",
-    title: "Koordinator Siaga",
-    subtitle: "Pembinaan Satuan Siaga Putri",
-    members: [],
-  },
-  {
-    id: "sec-putri-penggalang",
-    category: "PEMBINA PUTRI",
-    title: "Koordinator Penggalang",
-    subtitle: "Pembinaan Satuan Penggalang Putri",
-    members: [],
-  },
-  {
-    id: "sec-pembantu",
-    category: "PEMBANTU PEMBINA",
-    title: "Pembantu Pembina",
-    subtitle: "Dukungan Teknis & Lapangan",
-    members: [],
-  },
-  {
-    id: "sec-alumni",
-    category: "PERWAKILAN ALUMNI",
-    title: "Perwakilan Alumni Pramuka",
-    subtitle: "Dukungan Kemitraan & Paguyuban Alumni",
-    members: [],
-  },
-];
 
 export default async function ManagementStructurePage() {
   const session = await getSession();
@@ -138,6 +66,12 @@ export default async function ManagementStructurePage() {
       // Merge with template to ensure all standard sections are preserved
       const savedMap = new Map(parsedStructure.map((item: any) => [item.id, item]));
 
+      // Migrate existing sec-mabigus to sec-mabigus-ketua if present
+      if (savedMap.has("sec-mabigus") && !savedMap.has("sec-mabigus-ketua")) {
+        const oldMabigus = savedMap.get("sec-mabigus");
+        savedMap.set("sec-mabigus-ketua", { ...oldMabigus, id: "sec-mabigus-ketua" });
+      }
+
       structureData = DEFAULT_STRUCTURE_TEMPLATE.map((tpl) => {
         const existing = savedMap.get(tpl.id);
         if (existing && Array.isArray(existing.members)) {
@@ -167,6 +101,9 @@ export default async function ManagementStructurePage() {
           return {
             ...tpl,
             ...existing,
+            category: tpl.category,
+            title: tpl.title,
+            subtitle: tpl.subtitle,
             members: enrichedMembers,
           };
         }
@@ -196,7 +133,7 @@ export default async function ManagementStructurePage() {
         const nameLower = (lead.name || "").toLowerCase();
 
         if (posLower.includes("mabigus")) {
-          templateCopy.find((s: any) => s.id === "sec-mabigus")?.members.push(memberObj);
+          templateCopy.find((s: any) => s.id === "sec-mabigus-ketua")?.members.push(memberObj);
         } else if (posLower.includes("gudep") || nameLower.includes("badri")) {
           templateCopy.find((s: any) => s.id === "sec-gudep")?.members.push(memberObj);
         } else if (memberObj.gender === "P") {

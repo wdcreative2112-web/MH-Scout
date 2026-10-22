@@ -238,7 +238,7 @@ export function PermitLetterTemplate({
               <img
                 src={orgLogo}
                 alt="Logo Pramuka"
-                className="w-12 h-12 sm:w-18 sm:h-18 object-contain rounded-lg"
+                className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg"
               />
             </div>
 

@@ -181,19 +181,32 @@ export async function deleteMeetingAction(meetingId: string) {
   try {
     const meeting = await prisma.attendanceMeeting.findUnique({
       where: { id: meetingId },
-      select: { id: true, title: true },
+      select: { id: true, title: true, meetingDate: true },
     });
 
     if (!meeting) {
       return { success: false, error: "Pertemuan tidak ditemukan." };
     }
 
-    // Hapus log audit absensi spesifik pertemuan ini
+    // 1. Catat tanggal pertemuan yang dihapus agar syncRoutineMeetings tidak membangkitkannya kembali
+    if (meeting.meetingDate) {
+      const { addExcludedRoutineDate } = await import("@/lib/routineSchedule");
+      const d = new Date(meeting.meetingDate);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      await addExcludedRoutineDate(dateStr).catch(() => {});
+    }
+
+    // 2. Hapus log audit absensi spesifik pertemuan ini
     await prisma.attendanceAuditLog.deleteMany({
       where: { meetingId },
     }).catch(() => {});
 
-    // Hapus pertemuan (records terhapus secara cascade melalui schema Prisma)
+    // 3. Hapus seluruh data presensi anggota pada pertemuan ini secara eksplisit (mencegah error FK)
+    await prisma.attendanceRecord.deleteMany({
+      where: { meetingId },
+    }).catch(() => {});
+
+    // 4. Hapus data pertemuan
     await prisma.attendanceMeeting.delete({
       where: { id: meetingId },
     });
@@ -211,9 +224,9 @@ export async function deleteMeetingAction(meetingId: string) {
     revalidatePath("/dashboard/attendance");
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (err) {
+  } catch (err: any) {
     console.error("Delete meeting error:", err);
-    return { success: false, error: "Gagal menghapus jadwal pertemuan." };
+    return { success: false, error: err?.message || "Gagal menghapus jadwal pertemuan." };
   }
 }
 
@@ -463,6 +476,14 @@ export async function saveBatchAttendanceAction(data: {
         });
       }
     });
+
+    // Sinkronkan denda untuk status ALPA secara otomatis
+    try {
+      const { syncFinesForMeeting } = await import("@/actions/fines");
+      await syncFinesForMeeting(meetingId, records);
+    } catch (err) {
+      console.error("Fine sync notice:", err);
+    }
 
     await prisma.auditLog.create({
       data: {

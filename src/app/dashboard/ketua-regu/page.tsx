@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   HelpCircle,
   BookOpen,
+  FileText,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +145,13 @@ export default async function KetuaReguDashboardPage() {
             >
               <CheckSquare className="w-4 h-4 text-slate-950" />
               <span>Presensi Latihan</span>
+            </Link>
+            <Link
+              href="/dashboard/attendance/izin"
+              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm backdrop-blur-md border border-emerald-500/40 transition-all"
+            >
+              <FileText className="w-4 h-4 text-amber-300" />
+              <span>Pengajuan Izin</span>
             </Link>
             <Link
               href="/dashboard/members"

@@ -66,6 +66,12 @@ export function DashboardSidebar({ session, onCloseMobile }: SidebarProps) {
           show: role === "ADMIN" || role === "SEKRETARIS" || role === "KETUA_REGU",
         },
         {
+          name: "Pengajuan Izin / Sakit",
+          href: "/dashboard/attendance/izin",
+          icon: FileText,
+          show: role === "KETUA_REGU",
+        },
+        {
           name: role === "KETUA_REGU" ? "Anggota Regu Saya" : "Data Anggota",
           href: "/dashboard/members",
           icon: Users,
