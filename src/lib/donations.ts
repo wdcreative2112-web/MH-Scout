@@ -17,198 +17,10 @@ interface DonationStoreData {
   donations: Donation[];
 }
 
-const DEFAULT_ACCOUNTS: DonationAccount[] = [
-  {
-    id: "acc-bsi",
-    bankName: "Bank Syariah Indonesia (BSI)",
-    accountNumber: "7198234501",
-    accountHolder: "PRAMUKA GUGUS DEPAN MH SCOUT",
-    description: "Rekening operasional utama kegiatan kepanduan & infak",
-    isActive: true,
-    sortOrder: 1,
-  },
-  {
-    id: "acc-bca",
-    bankName: "Bank Central Asia (BCA)",
-    accountNumber: "8415209381",
-    accountHolder: "BENDAHARA PRAMUKA MH SCOUT",
-    description: "Menerima transfer antar bank dan jaringan ATM Bersama",
-    isActive: true,
-    sortOrder: 2,
-  },
-  {
-    id: "acc-mandiri",
-    bankName: "Bank Mandiri",
-    accountNumber: "1330029871642",
-    accountHolder: "PRAMUKA MH SCOUT PANGKALAN",
-    description: "Transfer via Mandiri Livin' & Virtual Account",
-    isActive: true,
-    sortOrder: 3,
-  },
-  {
-    id: "acc-qris",
-    bankName: "QRIS Nasional (Semua Bank & E-Wallet)",
-    accountNumber: "QRIS",
-    accountHolder: "PRAMUKA MH SCOUT RESMI",
-    qrImageUrl: null,
-    description: "Scan barcode QRIS resmi yang diunggah oleh admin pangkalan untuk pembayaran via GoPay, OVO, Dana, ShopeePay, BCA, Livin, dll",
-    isActive: true,
-    sortOrder: 4,
-  },
-];
+// ----------------------------------------------------------------------
+// STORE (JSON BACKUP / FALLBACK)
+// ----------------------------------------------------------------------
 
-const DEFAULT_CAMPAIGNS: DonationCampaign[] = [
-  {
-    id: "camp-1",
-    title: "Pengadaan Tenda Dome Regu & Perlengkapan Pioneering",
-    slug: "tenda-regu-pioneering",
-    category: "Sarana & Prasarana",
-    description:
-      "Mendukung peremajaan 8 unit tenda regu dan tali temali berkualitas untuk latihan lapangan serta perkemahan besar adik-adik Penggalang dan Penegak.",
-    targetAmount: 15000000,
-    collectedAmount: 8750000,
-    donorCount: 24,
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-    coverImage: "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=1000&auto=format&fit=crop&q=80",
-    status: "ACTIVE",
-    isFeatured: true,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "camp-2",
-    title: "Beasiswa Seragam & Pembinaan Anggota Yatim/Dhuafa",
-    slug: "beasiswa-seragam-pramuka-dhuafa",
-    category: "Beasiswa & Pembinaan",
-    description:
-      "Memberikan bantuan seragam lengkap, atribut kepramukaan, dan biaya kegiatan perkemahan bagi adik-adik pramuka berprestasi dari keluarga prasejahtera.",
-    targetAmount: 10000000,
-    collectedAmount: 6400000,
-    donorCount: 19,
-    startDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-    coverImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000&auto=format&fit=crop&q=80",
-    status: "ACTIVE",
-    isFeatured: true,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "camp-3",
-    title: "Renovasi Sanggar Bakti & Inventaris Audio Lapangan",
-    slug: "renovasi-sanggar-bakti",
-    category: "Sarana & Prasarana",
-    description:
-      "Perbaikan rak penyimpanan perlengkapan, meja administrasi sekretariat, serta pengadaan sound system portabel untuk upacara dan latihan baris-berbaris.",
-    targetAmount: 12000000,
-    collectedAmount: 4200000,
-    donorCount: 12,
-    startDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(),
-    coverImage: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1000&auto=format&fit=crop&q=80",
-    status: "ACTIVE",
-    isFeatured: false,
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "camp-4",
-    title: "Aksi Bakti Sosial & Penanaman 500 Bibit Pohon",
-    slug: "bakti-sosial-penanaman-pohon",
-    category: "Sosial & Bencana",
-    description:
-      "Program pengabdian masyarakat adik-adik pramuka untuk penghijauan lingkungan bantaran sungai dan penyaluran sembako kepada warga sekitar pangkalan.",
-    targetAmount: 8000000,
-    collectedAmount: 8250000,
-    donorCount: 31,
-    startDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    endDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    coverImage: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000&auto=format&fit=crop&q=80",
-    status: "COMPLETED",
-    isFeatured: false,
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-const DEFAULT_DONATIONS: Donation[] = [
-  {
-    id: "don-001",
-    donationNumber: "DON-20261012-001",
-    campaignId: "camp-1",
-    campaignTitle: "Pengadaan Tenda Dome Regu & Perlengkapan Pioneering",
-    donorName: "Kak Bambang Prasetyo",
-    isAnonymous: false,
-    donorEmail: "bambang.pr@gmail.com",
-    donorPhone: "081288991122",
-    amount: 1000000,
-    paymentMethod: "TRANSFER_BANK",
-    bankName: "Bank Syariah Indonesia (BSI)",
-    proofUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
-    status: "VERIFIED",
-    message: "Semoga barokah dan bermanfaat untuk latihan adik-adik di perkemahan. Salam Pramuka!",
-    verifiedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    verifiedById: "admin",
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "don-002",
-    donationNumber: "DON-20261013-002",
-    campaignId: "camp-2",
-    campaignTitle: "Beasiswa Seragam & Pembinaan Anggota Yatim/Dhuafa",
-    donorName: "Hamba Allah",
-    isAnonymous: true,
-    donorEmail: null,
-    donorPhone: "085711223344",
-    amount: 500000,
-    paymentMethod: "QRIS",
-    bankName: "QRIS Nasional",
-    status: "VERIFIED",
-    message: "Untuk adik-adik pramuka yang bersemangat menggapai Pramuka Garuda.",
-    verifiedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    verifiedById: "admin",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "don-003",
-    donationNumber: "DON-20261014-003",
-    campaignId: "camp-1",
-    campaignTitle: "Pengadaan Tenda Dome Regu & Perlengkapan Pioneering",
-    donorName: "Alumni Pramuka Angkatan 2018",
-    isAnonymous: false,
-    donorEmail: "alumni2018@gmail.com",
-    donorPhone: "081399887766",
-    amount: 1500000,
-    paymentMethod: "TRANSFER_BANK",
-    bankName: "Bank Central Asia (BCA)",
-    proofUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
-    status: "VERIFIED",
-    message: "Bakti dari kami alumni untuk pangkalan tercinta. Jayalah MH SCOUT!",
-    verifiedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    verifiedById: "admin",
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "don-004",
-    donationNumber: "DON-20261015-004",
-    campaignId: null,
-    campaignTitle: "Donasi Umum Pengembangan Gugus Depan",
-    donorName: "Ibu Hj. Ratna Juwita",
-    isAnonymous: false,
-    donorEmail: "ratna.juwita@yahoo.com",
-    donorPhone: "081277665544",
-    amount: 250000,
-    paymentMethod: "QRIS",
-    bankName: "QRIS",
-    proofUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
-    status: "PENDING",
-    message: "Mohon diterima sumbangan sederhana kami untuk kegiatan adik-adik.",
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-// Helper to ensure file exists and load
 function loadStore(): DonationStoreData {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -217,9 +29,9 @@ function loadStore(): DonationStoreData {
 
     if (!fs.existsSync(DATA_FILE)) {
       const initial: DonationStoreData = {
-        accounts: DEFAULT_ACCOUNTS,
-        campaigns: DEFAULT_CAMPAIGNS,
-        donations: DEFAULT_DONATIONS,
+        accounts: [],
+        campaigns: [],
+        donations: [],
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2), "utf-8");
       return initial;
@@ -228,16 +40,16 @@ function loadStore(): DonationStoreData {
     const content = fs.readFileSync(DATA_FILE, "utf-8");
     const parsed = JSON.parse(content);
     return {
-      accounts: parsed.accounts || DEFAULT_ACCOUNTS,
-      campaigns: parsed.campaigns || DEFAULT_CAMPAIGNS,
-      donations: parsed.donations || DEFAULT_DONATIONS,
+      accounts: parsed.accounts || [],
+      campaigns: parsed.campaigns || [],
+      donations: parsed.donations || [],
     };
   } catch (err) {
-    console.warn("Failed to read donation store, using defaults:", err);
+    console.warn("Failed to read donation store, using empty state:", err);
     return {
-      accounts: DEFAULT_ACCOUNTS,
-      campaigns: DEFAULT_CAMPAIGNS,
-      donations: DEFAULT_DONATIONS,
+      accounts: [],
+      campaigns: [],
+      donations: [],
     };
   }
 }
@@ -255,17 +67,80 @@ function saveStore(data: DonationStoreData): boolean {
   }
 }
 
-// Check if Prisma has donationCampaign model ready
-async function canUsePrisma(): Promise<boolean> {
-  try {
-    if ((prisma as any).donationCampaign && typeof (prisma as any).donationCampaign.findMany === "function") {
-      await (prisma as any).donationCampaign.findFirst();
-      return true;
+// ----------------------------------------------------------------------
+// DATA MAPPING HELPERS
+// ----------------------------------------------------------------------
+
+export function mapCampaignRecord(c: any): DonationCampaign {
+  return {
+    id: c.id,
+    title: c.title,
+    slug: c.slug,
+    category: c.category || "Sarana & Prasarana",
+    description: c.description || "",
+    targetAmount: Number(c.targetAmount || 0),
+    collectedAmount: Number(c.collectedAmount || 0),
+    donorCount: Number(c.donorCount || 0),
+    startDate: c.startDate instanceof Date ? c.startDate.toISOString() : String(c.startDate || new Date().toISOString()),
+    endDate: c.endDate ? (c.endDate instanceof Date ? c.endDate.toISOString() : String(c.endDate)) : null,
+    coverImage: c.coverImage || null,
+    status: (c.status || "ACTIVE") as any,
+    isFeatured: Boolean(c.isFeatured),
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt || new Date().toISOString()),
+    updatedAt: c.updatedAt ? (c.updatedAt instanceof Date ? c.updatedAt.toISOString() : String(c.updatedAt)) : undefined,
+  };
+}
+
+export function mapDonationRecord(d: any): Donation {
+  let campaignTitle = d.campaignTitle;
+  if (!campaignTitle) {
+    if (d.campaign && d.campaign.title) {
+      campaignTitle = d.campaign.title;
+    } else if (!d.campaignId) {
+      campaignTitle = "Donasi Umum Pangkalan";
     }
-  } catch {
-    // Model not yet migrated in DB
   }
-  return false;
+
+  return {
+    id: d.id,
+    donationNumber: d.donationNumber,
+    campaignId: d.campaignId || null,
+    campaignTitle: campaignTitle || null,
+    donorName: d.donorName,
+    isAnonymous: Boolean(d.isAnonymous),
+    donorEmail: d.donorEmail || null,
+    donorPhone: d.donorPhone || null,
+    amount: Number(d.amount || 0),
+    paymentMethod: d.paymentMethod || "TRANSFER_BANK",
+    bankName: d.bankName || null,
+    proofUrl: d.proofUrl || null,
+    status: (d.status || "PENDING") as DonationStatus,
+    message: d.message || null,
+    verifiedAt: d.verifiedAt ? (d.verifiedAt instanceof Date ? d.verifiedAt.toISOString() : String(d.verifiedAt)) : null,
+    verifiedById: d.verifiedById || null,
+    rejectionReason: d.rejectionReason || null,
+    createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt || new Date().toISOString()),
+    updatedAt: d.updatedAt ? (d.updatedAt instanceof Date ? d.updatedAt.toISOString() : String(d.updatedAt)) : undefined,
+  };
+}
+
+async function resolveVerifiedById(userId?: string | null): Promise<string | null> {
+  if (!userId) return null;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (user) return user.id;
+
+    const fallbackAdmin = await prisma.user.findFirst({
+      where: { role: "ADMIN" },
+      select: { id: true },
+    });
+    return fallbackAdmin?.id || null;
+  } catch {
+    return null;
+  }
 }
 
 // ----------------------------------------------------------------------
@@ -277,9 +152,37 @@ export async function getDonationCampaigns(filter?: {
   category?: string;
   search?: string;
 }): Promise<DonationCampaign[]> {
+  try {
+    const where: any = {};
+    if (filter?.status && filter.status !== "ALL") {
+      where.status = filter.status;
+    }
+    if (filter?.category && filter.category !== "ALL") {
+      where.category = filter.category;
+    }
+    if (filter?.search) {
+      const q = filter.search.trim();
+      where.OR = [
+        { title: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { category: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    const campaigns = await prisma.donationCampaign.findMany({
+      where,
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    });
+
+    // Database is source of truth: return database result directly
+    return campaigns.map(mapCampaignRecord);
+  } catch (err) {
+    console.warn("Prisma getDonationCampaigns error, using store fallback:", err);
+  }
+
+  // Fallback to store ONLY if database query throws an error
   const store = loadStore();
   let list = [...store.campaigns];
-
   if (filter?.status && filter.status !== "ALL") {
     list = list.filter((c) => c.status === filter.status);
   }
@@ -295,86 +198,189 @@ export async function getDonationCampaigns(filter?: {
         c.category.toLowerCase().includes(q)
     );
   }
-
   return list;
 }
 
 export async function getDonationCampaignBySlug(
   slug: string
 ): Promise<DonationCampaign | null> {
+  try {
+    const campaign = await prisma.donationCampaign.findUnique({
+      where: { slug },
+    });
+    return campaign ? mapCampaignRecord(campaign) : null;
+  } catch (err) {
+    console.warn("Prisma getDonationCampaignBySlug error, using store fallback:", err);
+  }
+
   const store = loadStore();
-  const found = store.campaigns.find((c) => c.slug === slug);
-  return found || null;
+  return store.campaigns.find((c) => c.slug === slug) || null;
 }
 
 export async function getDonationCampaignById(
   id: string
 ): Promise<DonationCampaign | null> {
+  try {
+    const campaign = await prisma.donationCampaign.findUnique({
+      where: { id },
+    });
+    return campaign ? mapCampaignRecord(campaign) : null;
+  } catch (err) {
+    console.warn("Prisma getDonationCampaignById error, using store fallback:", err);
+  }
+
   const store = loadStore();
-  const found = store.campaigns.find((c) => c.id === id);
-  return found || null;
+  return store.campaigns.find((c) => c.id === id) || null;
 }
 
 export async function saveDonationCampaign(
   data: Partial<DonationCampaign> & { title: string; targetAmount: number }
 ): Promise<DonationCampaign> {
-  const store = loadStore();
-  const now = new Date().toISOString();
+  let savedCampaign: DonationCampaign;
 
-  if (data.id) {
-    // Update
-    const idx = store.campaigns.findIndex((c) => c.id === data.id);
-    if (idx !== -1) {
-      const updated: DonationCampaign = {
-        ...store.campaigns[idx],
-        ...data,
+  try {
+    if (data.id) {
+      // Update
+      const updated = await prisma.donationCampaign.update({
+        where: { id: data.id },
+        data: {
+          title: data.title,
+          category: data.category,
+          description: data.description || "",
+          targetAmount: Number(data.targetAmount),
+          endDate: data.endDate ? new Date(data.endDate) : null,
+          coverImage: data.coverImage,
+          status: data.status || "ACTIVE",
+          isFeatured: data.isFeatured ?? false,
+        },
+      });
+      savedCampaign = mapCampaignRecord(updated);
+    } else {
+      // Create
+      const baseSlug =
+        data.slug ||
+        data.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      const slug = `${baseSlug}-${Math.floor(100 + Math.random() * 900)}`;
+
+      const created = await prisma.donationCampaign.create({
+        data: {
+          title: data.title,
+          slug,
+          category: data.category || "Sarana & Prasarana",
+          description: data.description || "",
+          targetAmount: Number(data.targetAmount),
+          collectedAmount: 0,
+          donorCount: 0,
+          startDate: data.startDate ? new Date(data.startDate) : new Date(),
+          endDate: data.endDate ? new Date(data.endDate) : null,
+          coverImage:
+            data.coverImage ||
+            "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=1000&auto=format&fit=crop&q=80",
+          status: data.status || "ACTIVE",
+          isFeatured: data.isFeatured ?? false,
+        },
+      });
+      savedCampaign = mapCampaignRecord(created);
+    }
+  } catch (dbErr) {
+    console.warn("Prisma saveDonationCampaign failed, saving to local store:", dbErr);
+    const store = loadStore();
+    const now = new Date().toISOString();
+
+    if (data.id) {
+      const idx = store.campaigns.findIndex((c) => c.id === data.id);
+      if (idx !== -1) {
+        savedCampaign = {
+          ...store.campaigns[idx],
+          ...data,
+          targetAmount: Number(data.targetAmount),
+          updatedAt: now,
+        };
+        store.campaigns[idx] = savedCampaign;
+      } else {
+        savedCampaign = {
+          id: data.id,
+          title: data.title,
+          slug: data.slug || `campaign-${Date.now()}`,
+          category: data.category || "Sarana & Prasarana",
+          description: data.description || "",
+          targetAmount: Number(data.targetAmount),
+          collectedAmount: 0,
+          donorCount: 0,
+          startDate: data.startDate || now,
+          endDate: data.endDate || null,
+          coverImage: data.coverImage || null,
+          status: data.status || "ACTIVE",
+          isFeatured: data.isFeatured ?? false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        store.campaigns.unshift(savedCampaign);
+      }
+    } else {
+      const id = `camp-${Date.now()}`;
+      const slug =
+        data.slug ||
+        data.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+
+      savedCampaign = {
+        id,
+        title: data.title,
+        slug: `${slug}-${Math.floor(100 + Math.random() * 900)}`,
+        category: data.category || "Sarana & Prasarana",
+        description: data.description || "",
         targetAmount: Number(data.targetAmount),
+        collectedAmount: 0,
+        donorCount: 0,
+        startDate: data.startDate || now,
+        endDate: data.endDate || null,
+        coverImage:
+          data.coverImage ||
+          "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=1000&auto=format&fit=crop&q=80",
+        status: data.status || "ACTIVE",
+        isFeatured: data.isFeatured ?? false,
+        createdAt: now,
         updatedAt: now,
       };
-      store.campaigns[idx] = updated;
-      saveStore(store);
-      return updated;
+      store.campaigns.unshift(savedCampaign);
     }
   }
 
-  // Create
-  const id = `camp-${Date.now()}`;
-  const slug =
-    data.slug ||
-    data.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-  const newCampaign: DonationCampaign = {
-    id,
-    title: data.title,
-    slug: `${slug}-${Math.floor(100 + Math.random() * 900)}`,
-    category: data.category || "Sarana & Prasarana",
-    description: data.description || "",
-    targetAmount: Number(data.targetAmount),
-    collectedAmount: 0,
-    donorCount: 0,
-    startDate: data.startDate || now,
-    endDate: data.endDate || null,
-    coverImage:
-      data.coverImage ||
-      "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=1000&auto=format&fit=crop&q=80",
-    status: data.status || "ACTIVE",
-    isFeatured: data.isFeatured ?? false,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  store.campaigns.unshift(newCampaign);
+  // Keep local store synchronized
+  const store = loadStore();
+  const stIdx = store.campaigns.findIndex((c) => c.id === savedCampaign.id);
+  if (stIdx !== -1) {
+    store.campaigns[stIdx] = savedCampaign;
+  } else {
+    store.campaigns.unshift(savedCampaign);
+  }
   saveStore(store);
-  return newCampaign;
+
+  return savedCampaign;
 }
 
 export async function deleteDonationCampaign(id: string): Promise<boolean> {
+  let dbSuccess = false;
+  try {
+    await prisma.donationCampaign.delete({
+      where: { id },
+    });
+    dbSuccess = true;
+  } catch (err) {
+    console.warn("Prisma deleteDonationCampaign notice:", err);
+  }
+
   const store = loadStore();
   store.campaigns = store.campaigns.filter((c) => c.id !== id);
-  return saveStore(store);
+  saveStore(store);
+
+  return dbSuccess || true;
 }
 
 // ----------------------------------------------------------------------
@@ -386,9 +392,43 @@ export async function getDonations(filter?: {
   campaignId?: string;
   search?: string;
 }): Promise<Donation[]> {
+  try {
+    const where: any = {};
+    if (filter?.status && filter.status !== "ALL") {
+      where.status = filter.status;
+    }
+    if (filter?.campaignId && filter.campaignId !== "ALL") {
+      where.campaignId = filter.campaignId;
+    }
+    if (filter?.search) {
+      const q = filter.search.trim();
+      where.OR = [
+        { donationNumber: { contains: q, mode: "insensitive" } },
+        { donorName: { contains: q, mode: "insensitive" } },
+        { donorPhone: { contains: q, mode: "insensitive" } },
+        { message: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    const donations = await prisma.donation.findMany({
+      where,
+      include: {
+        campaign: {
+          select: { id: true, title: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Database is source of truth: return database result directly (even if empty [])
+    return donations.map(mapDonationRecord);
+  } catch (err) {
+    console.warn("Prisma getDonations error, using store fallback:", err);
+  }
+
+  // Fallback to store ONLY if database query throws an error
   const store = loadStore();
   let list = [...store.donations];
-
   if (filter?.status && filter.status !== "ALL") {
     list = list.filter((d) => d.status === filter.status);
   }
@@ -405,19 +445,29 @@ export async function getDonations(filter?: {
         (d.message && d.message.toLowerCase().includes(q))
     );
   }
-
-  // Sort newest first
   list.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-
   return list;
 }
 
 export async function getDonationById(id: string): Promise<Donation | null> {
+  try {
+    const donation = await prisma.donation.findUnique({
+      where: { id },
+      include: {
+        campaign: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+    return donation ? mapDonationRecord(donation) : null;
+  } catch (err) {
+    console.warn("Prisma getDonationById error, using store fallback:", err);
+  }
+
   const store = loadStore();
-  const found = store.donations.find((d) => d.id === id);
-  return found || null;
+  return store.donations.find((d) => d.id === id) || null;
 }
 
 export async function submitDonation(data: {
@@ -432,41 +482,77 @@ export async function submitDonation(data: {
   proofUrl?: string | null;
   message?: string | null;
 }): Promise<Donation> {
-  const store = loadStore();
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
   const randomSuffix = Math.floor(100 + Math.random() * 900);
   const donationNumber = `DON-${dateStr}-${randomSuffix}`;
 
-  let campaignTitle = "Donasi Umum Pangkalan";
-  if (data.campaignId) {
-    const camp = store.campaigns.find((c) => c.id === data.campaignId);
-    if (camp) campaignTitle = camp.title;
+  const donorName = data.donorName.trim() || (data.isAnonymous ? "Hamba Allah" : "Donatur");
+  const isAnonymous = Boolean(data.isAnonymous);
+  const amount = Number(data.amount);
+
+  let savedDonation: Donation;
+
+  try {
+    // 1. Simpan langsung ke database PostgreSQL melalui Prisma
+    const created = await prisma.donation.create({
+      data: {
+        donationNumber,
+        campaignId: data.campaignId || null,
+        donorName,
+        isAnonymous,
+        donorEmail: data.donorEmail || null,
+        donorPhone: data.donorPhone || null,
+        amount,
+        paymentMethod: data.paymentMethod || "TRANSFER_BANK",
+        bankName: data.bankName || null,
+        proofUrl: data.proofUrl || null,
+        status: "PENDING",
+        message: data.message || null,
+      },
+      include: {
+        campaign: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+
+    savedDonation = mapDonationRecord(created);
+  } catch (dbErr) {
+    console.warn("Prisma submitDonation failed, saving to local store:", dbErr);
+    let campaignTitle = "Donasi Umum Pangkalan";
+    const store = loadStore();
+    if (data.campaignId) {
+      const camp = store.campaigns.find((c) => c.id === data.campaignId);
+      if (camp) campaignTitle = camp.title;
+    }
+
+    savedDonation = {
+      id: `don-${Date.now()}`,
+      donationNumber,
+      campaignId: data.campaignId || null,
+      campaignTitle,
+      donorName,
+      isAnonymous,
+      donorEmail: data.donorEmail || null,
+      donorPhone: data.donorPhone || null,
+      amount,
+      paymentMethod: data.paymentMethod || "TRANSFER_BANK",
+      bankName: data.bankName || null,
+      proofUrl: data.proofUrl || null,
+      status: "PENDING",
+      message: data.message || null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
   }
 
-  const newDonation: Donation = {
-    id: `don-${Date.now()}`,
-    donationNumber,
-    campaignId: data.campaignId || null,
-    campaignTitle,
-    donorName: data.donorName.trim() || (data.isAnonymous ? "Hamba Allah" : "Donatur Pramuka"),
-    isAnonymous: Boolean(data.isAnonymous),
-    donorEmail: data.donorEmail || null,
-    donorPhone: data.donorPhone || null,
-    amount: Number(data.amount),
-    paymentMethod: data.paymentMethod || "TRANSFER_BANK",
-    bankName: data.bankName || null,
-    proofUrl: data.proofUrl || null,
-    status: "PENDING",
-    message: data.message || null,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  };
-
-  store.donations.unshift(newDonation);
+  // Sinkronkan ke store lokal sebagai backup
+  const store = loadStore();
+  store.donations.unshift(savedDonation);
   saveStore(store);
 
-  return newDonation;
+  return savedDonation;
 }
 
 export async function verifyDonation(
@@ -474,43 +560,96 @@ export async function verifyDonation(
   verifiedById: string,
   verifiedByName?: string
 ): Promise<{ success: boolean; donation?: Donation; error?: string }> {
+  const actualVerifiedById = await resolveVerifiedById(verifiedById);
+  let updatedDonation: Donation | null = null;
+
+  try {
+    // 1. Ambil data donasi yang ada di DB
+    const existing = await prisma.donation.findUnique({
+      where: { id: donationId },
+      include: { campaign: true },
+    });
+
+    if (existing) {
+      if (existing.status === "VERIFIED") {
+        return { success: true, donation: mapDonationRecord(existing) };
+      }
+
+      // Update status donasi menjadi VERIFIED
+      const updated = await prisma.donation.update({
+        where: { id: donationId },
+        data: {
+          status: "VERIFIED",
+          verifiedAt: new Date(),
+          verifiedById: actualVerifiedById,
+          rejectionReason: null,
+        },
+        include: {
+          campaign: {
+            select: { id: true, title: true },
+          },
+        },
+      });
+
+      // Update nominal terkumpul dan donor count pada program kampanye
+      if (existing.campaignId && existing.campaign) {
+        const newCollected = Number(existing.campaign.collectedAmount || 0) + Number(existing.amount);
+        const newDonorCount = Number(existing.campaign.donorCount || 0) + 1;
+        const target = Number(existing.campaign.targetAmount);
+        const newStatus = newCollected >= target ? "COMPLETED" : existing.campaign.status;
+
+        await prisma.donationCampaign.update({
+          where: { id: existing.campaignId },
+          data: {
+            collectedAmount: newCollected,
+            donorCount: newDonorCount,
+            status: newStatus,
+          },
+        });
+      }
+
+      updatedDonation = mapDonationRecord(updated);
+    }
+  } catch (dbErr) {
+    console.warn("Prisma verifyDonation failed, updating store fallback:", dbErr);
+  }
+
+  // Update store lokal
   const store = loadStore();
   const idx = store.donations.findIndex((d) => d.id === donationId);
-  if (idx === -1) {
-    return { success: false, error: "Data donasi tidak ditemukan." };
-  }
+  if (idx !== -1) {
+    const don = store.donations[idx];
+    const now = new Date().toISOString();
+    don.status = "VERIFIED";
+    don.verifiedAt = now;
+    don.verifiedById = actualVerifiedById || verifiedById;
+    don.rejectionReason = null;
+    store.donations[idx] = don;
 
-  const don = store.donations[idx];
-  if (don.status === "VERIFIED") {
-    return { success: true, donation: don };
-  }
+    if (don.campaignId) {
+      const cIdx = store.campaigns.findIndex((c) => c.id === don.campaignId);
+      if (cIdx !== -1) {
+        store.campaigns[cIdx].collectedAmount =
+          Number(store.campaigns[cIdx].collectedAmount || 0) + Number(don.amount);
+        store.campaigns[cIdx].donorCount =
+          Number(store.campaigns[cIdx].donorCount || 0) + 1;
 
-  const now = new Date().toISOString();
-  don.status = "VERIFIED";
-  don.verifiedAt = now;
-  don.verifiedById = verifiedById;
-  don.rejectionReason = null;
-  store.donations[idx] = don;
-
-  // Increment campaign collected amount and donor count
-  if (don.campaignId) {
-    const cIdx = store.campaigns.findIndex((c) => c.id === don.campaignId);
-    if (cIdx !== -1) {
-      store.campaigns[cIdx].collectedAmount =
-        Number(store.campaigns[cIdx].collectedAmount || 0) + Number(don.amount);
-      store.campaigns[cIdx].donorCount =
-        Number(store.campaigns[cIdx].donorCount || 0) + 1;
-      
-      // Auto complete campaign if target reached
-      if (store.campaigns[cIdx].collectedAmount >= store.campaigns[cIdx].targetAmount) {
-        store.campaigns[cIdx].status = "COMPLETED";
+        if (store.campaigns[cIdx].collectedAmount >= store.campaigns[cIdx].targetAmount) {
+          store.campaigns[cIdx].status = "COMPLETED";
+        }
       }
+    }
+    saveStore(store);
+    if (!updatedDonation) {
+      updatedDonation = don;
     }
   }
 
-  saveStore(store);
+  if (!updatedDonation) {
+    return { success: false, error: "Data donasi tidak ditemukan." };
+  }
 
-  // Synchronize to FinancialTransaction if Prisma is accessible
+  // 2. Sinkronisasikan ke FinancialTransaction (Buku Kas Pemasukan Gugus Depan)
   try {
     const cat = await prisma.financeCategory.findFirst({
       where: {
@@ -527,29 +666,34 @@ export async function verifyDonation(
       catId = anyIncomeCat?.id;
     }
 
-    if (catId) {
-      await prisma.financialTransaction.create({
-        data: {
-          referenceNo: don.donationNumber,
-          date: new Date(),
-          type: "PEMASUKAN",
-          categoryId: catId,
-          amount: don.amount,
-          title: `Donasi: ${don.campaignTitle || "Umum"} (${don.isAnonymous ? "Hamba Allah" : don.donorName})`,
-          sourceOrRecipient: don.isAnonymous ? "Hamba Allah" : don.donorName,
-          description: `Donasi masuk terverifikasi no. ${don.donationNumber}. Pesan: ${don.message || "-"}`,
-          proofUrl: don.proofUrl,
-          status: "VALID",
-          createdById: verifiedById,
-        },
+    if (catId && actualVerifiedById) {
+      const existingTx = await prisma.financialTransaction.findFirst({
+        where: { referenceNo: updatedDonation.donationNumber },
       });
+
+      if (!existingTx) {
+        await prisma.financialTransaction.create({
+          data: {
+            referenceNo: updatedDonation.donationNumber,
+            date: new Date(),
+            type: "PEMASUKAN",
+            categoryId: catId,
+            amount: updatedDonation.amount,
+            title: `Donasi: ${updatedDonation.campaignTitle || "Umum"} (${updatedDonation.isAnonymous ? "Hamba Allah" : updatedDonation.donorName})`,
+            sourceOrRecipient: updatedDonation.isAnonymous ? "Hamba Allah" : updatedDonation.donorName,
+            description: `Donasi masuk terverifikasi no. ${updatedDonation.donationNumber}. Pesan: ${updatedDonation.message || "-"}`,
+            proofUrl: updatedDonation.proofUrl,
+            status: "VALID",
+            createdById: actualVerifiedById,
+          },
+        });
+      }
     }
   } catch (e) {
-    // Keep donation verification intact even if financial sync is offline
     console.warn("Could not sync to FinancialTransaction:", e);
   }
 
-  return { success: true, donation: don };
+  return { success: true, donation: updatedDonation };
 }
 
 export async function rejectDonation(
@@ -557,33 +701,59 @@ export async function rejectDonation(
   reason: string,
   verifiedById: string
 ): Promise<{ success: boolean; donation?: Donation; error?: string }> {
+  const actualVerifiedById = await resolveVerifiedById(verifiedById);
+  let updatedDonation: Donation | null = null;
+
+  try {
+    const updated = await prisma.donation.update({
+      where: { id: donationId },
+      data: {
+        status: "REJECTED",
+        rejectionReason: reason || "Bukti transfer tidak sesuai atau tidak valid.",
+        verifiedById: actualVerifiedById,
+        verifiedAt: new Date(),
+      },
+      include: {
+        campaign: {
+          select: { id: true, title: true },
+        },
+      },
+    });
+    updatedDonation = mapDonationRecord(updated);
+  } catch (err) {
+    console.warn("Prisma rejectDonation notice, updating local store:", err);
+  }
+
   const store = loadStore();
   const idx = store.donations.findIndex((d) => d.id === donationId);
-  if (idx === -1) {
+  if (idx !== -1) {
+    const don = store.donations[idx];
+    don.status = "REJECTED";
+    don.rejectionReason = reason || "Bukti transfer tidak sesuai atau tidak valid.";
+    don.verifiedById = actualVerifiedById || verifiedById;
+    don.verifiedAt = new Date().toISOString();
+    store.donations[idx] = don;
+    saveStore(store);
+    if (!updatedDonation) {
+      updatedDonation = don;
+    }
+  }
+
+  if (!updatedDonation) {
     return { success: false, error: "Data donasi tidak ditemukan." };
   }
 
-  const don = store.donations[idx];
-  don.status = "REJECTED";
-  don.rejectionReason = reason || "Bukti transfer tidak sesuai atau tidak valid.";
-  don.verifiedById = verifiedById;
-  don.verifiedAt = new Date().toISOString();
-  store.donations[idx] = don;
-  saveStore(store);
-
-  return { success: true, donation: don };
+  return { success: true, donation: updatedDonation };
 }
 
 // ----------------------------------------------------------------------
 // ACCOUNTS & QRIS
 // ----------------------------------------------------------------------
 
-// Helper aman untuk Prisma delegate donationAccount (fleksibel jika prisma client belum dire-generate)
 const getPrismaAccount = () => (prisma as any)?.donationAccount;
 
 export function normalizeAccountRecord(a: any): DonationAccount {
   let qr = a.qrImageUrl || null;
-  // Pastikan URL generator palsu/dummy api.qrserver.com dibersihkan sepenuhnya
   if (typeof qr === "string" && qr.includes("api.qrserver.com")) {
     qr = null;
   }
@@ -607,12 +777,10 @@ export async function getDonationAccounts(): Promise<DonationAccount[]> {
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
       });
-      if (dbAccounts && dbAccounts.length > 0) {
-        return dbAccounts.map(normalizeAccountRecord);
-      }
+      return dbAccounts.map(normalizeAccountRecord);
     }
-  } catch {
-    // fallback to store
+  } catch (err) {
+    console.warn("Prisma getDonationAccounts error, using store fallback:", err);
   }
 
   const store = loadStore();
@@ -629,12 +797,10 @@ export async function getAllDonationAccountsAdmin(): Promise<DonationAccount[]> 
       const dbAccounts = await delegate.findMany({
         orderBy: { sortOrder: "asc" },
       });
-      if (dbAccounts && dbAccounts.length > 0) {
-        return dbAccounts.map(normalizeAccountRecord);
-      }
+      return dbAccounts.map(normalizeAccountRecord);
     }
-  } catch {
-    // fallback to store
+  } catch (err) {
+    console.warn("Prisma getAllDonationAccountsAdmin error, using store fallback:", err);
   }
 
   const store = loadStore();
@@ -689,7 +855,7 @@ export async function saveDonationAccount(
 
   saveStore(store);
 
-  // 2. Dual-write sinkronisasi ke Prisma PostgreSQL database (dengan timeout agar tidak memblokir user)
+  // 2. Dual-write sinkronisasi ke Prisma PostgreSQL database
   try {
     const delegate = getPrismaAccount();
     if (delegate) {
@@ -788,6 +954,36 @@ export async function deleteDonationAccount(id: string): Promise<boolean> {
 // ----------------------------------------------------------------------
 
 export async function getDonationStats() {
+  try {
+    const [verifiedAgg, pendingAgg, activeCount, totalCampaigns] = await Promise.all([
+      prisma.donation.aggregate({
+        where: { status: "VERIFIED" },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.donation.aggregate({
+        where: { status: "PENDING" },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.donationCampaign.count({
+        where: { status: "ACTIVE" },
+      }),
+      prisma.donationCampaign.count(),
+    ]);
+
+    return {
+      totalCollected: Number(verifiedAgg._sum.amount || 0),
+      pendingCount: pendingAgg._count.id || 0,
+      pendingAmount: Number(pendingAgg._sum.amount || 0),
+      totalDonors: verifiedAgg._count.id || 0,
+      activeCampaignsCount: activeCount,
+      totalCampaignsCount: totalCampaigns,
+    };
+  } catch (err) {
+    console.warn("Prisma getDonationStats error, using store fallback:", err);
+  }
+
   const store = loadStore();
   const verified = store.donations.filter((d) => d.status === "VERIFIED");
   const pending = store.donations.filter((d) => d.status === "PENDING");

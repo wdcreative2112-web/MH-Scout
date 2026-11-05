@@ -1,12 +1,10 @@
 {
-  "dayOfWeek": 3,
-  "dayName": "Rabu",
-  "startTime": "14:00",
-  "endTime": "16:30",
-  "location": "Lapangan Utama Pangkalan",
+  "dayOfWeek": 5,
+  "dayName": "Jumat",
+  "startTime": "07:00",
+  "endTime": "10:00",
+  "location": "Lapangan",
   "titleTemplate": "Latihan Rutin",
   "isActive": true,
-  "excludedDates": [
-    "2026-10-28"
-  ]
+  "excludedDates": []
 }

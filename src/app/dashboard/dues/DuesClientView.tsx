@@ -9,6 +9,8 @@ import {
   deleteMemberDuesAction,
   generateMemberDuesBillAction,
   payMemberDuesAction,
+  settleMemberDuesAction,
+  resetMemberDuesPaymentAction,
 } from "@/actions/dues";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import {
@@ -25,6 +27,7 @@ import {
   FileCheck,
   Edit2,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
 
 interface DuesClientViewProps {
@@ -47,6 +50,7 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
   const [payingBill, setPayingBill] = useState<any | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [quickLoadingId, setQuickLoadingId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -185,6 +189,48 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
     } catch {
       setError("Terjadi kesalahan jaringan.");
       setLoading(false);
+    }
+  };
+
+  const handleQuickSettle = async (bill: any) => {
+    const remaining = Math.max(0, Number(bill.amount) - Number(bill.amountPaid));
+    if (remaining <= 0) return;
+    const confirmMsg = `Konfirmasi Pelunasan Iuran:\n\n• Anggota: ${bill.member?.fullName}\n• Jenis: ${bill.duesType?.name} (${bill.periodName})\n• Nominal Lunas: ${formatRupiah(remaining)}\n\nUang kas akan otomatis tercatat sebagai Pemasukan di buku kas gudep. Lanjutkan?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setQuickLoadingId(bill.id);
+    setError(null);
+    try {
+      const res = await settleMemberDuesAction(bill.id);
+      if (!res.success) {
+        setError(res.error || "Gagal melunasi iuran.");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+    } finally {
+      setQuickLoadingId(null);
+    }
+  };
+
+  const handleResetPayment = async (bill: any) => {
+    const confirmMsg = `PERINGATAN: Batalkan pembayaran iuran ini?\n\n• Anggota: ${bill.member?.fullName}\n• Periode: ${bill.periodName}\n• Total Terbayar: ${formatRupiah(bill.amountPaid)}\n\nStatus tagihan akan dikembalikan ke BELUM LUNAS dan catatan kas terkait akan otomatis diubah menjadi BATAL. Lanjutkan?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setQuickLoadingId(bill.id);
+    setError(null);
+    try {
+      const res = await resetMemberDuesPaymentAction(bill.id);
+      if (!res.success) {
+        setError(res.error || "Gagal membatalkan pembayaran.");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+    } finally {
+      setQuickLoadingId(null);
     }
   };
 
@@ -435,23 +481,50 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                     )}
 
                     {bill.status !== "LUNAS" ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPayingBill(bill);
-                          setError(null);
-                          setPayModalOpen(true);
-                        }}
-                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all ml-auto"
-                      >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>Bayar Sekarang</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <button
+                          type="button"
+                          disabled={quickLoadingId === bill.id}
+                          onClick={() => handleQuickSettle(bill)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center gap-1 shadow-2xs active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {quickLoadingId === bill.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>Lunaskan</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayingBill(bill);
+                            setError(null);
+                            setPayModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200"
+                        >
+                          Cicil
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-[11px] text-emerald-700 font-black inline-flex items-center gap-1 ml-auto">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Lunas Terverifikasi
-                      </span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-[11px] text-emerald-700 font-black inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Lunas Terverifikasi
+                        </span>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            disabled={quickLoadingId === bill.id}
+                            onClick={() => handleResetPayment(bill)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs transition-colors"
+                            title="Batalkan pelunasan / Reset ke Belum Lunas"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -497,16 +570,44 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {canEdit && bill.status !== "LUNAS" && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={quickLoadingId === bill.id}
+                              onClick={() => handleQuickSettle(bill)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-2xs active:scale-95 transition-all disabled:opacity-50"
+                              title="Lunaskan seluruh sisa tagihan dan catat langsung ke kas"
+                            >
+                              {quickLoadingId === bill.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3 h-3" />
+                              )}
+                              <span>Lunaskan</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPayingBill(bill);
+                                setError(null);
+                                setPayModalOpen(true);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-200"
+                              title="Bayar cicil / input nominal tertentu"
+                            >
+                              Cicil
+                            </button>
+                          </>
+                        )}
+                        {canEdit && Number(bill.amountPaid) > 0 && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setPayingBill(bill);
-                              setError(null);
-                              setPayModalOpen(true);
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]"
+                            disabled={quickLoadingId === bill.id}
+                            onClick={() => handleResetPayment(bill)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Batalkan pembayaran / Reset ke Belum Lunas"
                           >
-                            Bayar
+                            <RotateCcw className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {canEdit && Number(bill.amountPaid) === 0 && (
@@ -734,6 +835,11 @@ export function DuesClientView({ duesTypes, memberDuesList, canEdit }: DuesClien
               <p className="text-slate-700 font-bold">
                 Total Tagihan: {formatRupiah(payingBill.amount)} (Sudah Dibayar: {formatRupiah(payingBill.amountPaid)})
               </p>
+            </div>
+
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200/60 text-emerald-900 text-[11px] flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>Setoran iuran ini akan otomatis dicatat sebagai transaksi <strong>Pemasukan Kas</strong> di halaman Keuangan & Kas pangkalan.</span>
             </div>
 
             <form onSubmit={handlePaySubmit} className="space-y-4">

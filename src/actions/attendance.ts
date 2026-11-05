@@ -100,6 +100,21 @@ export async function updateMeetingAction(formData: FormData) {
   }
 
   try {
+    const existing = await prisma.attendanceMeeting.findUnique({ where: { id: parsed.data.id } });
+    if (!existing) return { success: false, error: "Pertemuan tidak ditemukan." };
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const mDate = new Date(existing.meetingDate);
+    const sessionDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+
+    if (sessionDay.getTime() < today.getTime() && session.role !== "ADMIN") {
+      return {
+        success: false,
+        error: "Akses ditolak: Jadwal pertemuan lampau telah diarsipkan. Hanya Admin yang berwenang mengubah jadwal lampau.",
+      };
+    }
+
     const meeting = await prisma.attendanceMeeting.update({
       where: { id: parsed.data.id },
       data: {
@@ -145,6 +160,21 @@ export async function toggleMeetingStatusAction(
   }
 
   try {
+    const existing = await prisma.attendanceMeeting.findUnique({ where: { id: meetingId } });
+    if (!existing) return { success: false, error: "Pertemuan tidak ditemukan." };
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const mDate = new Date(existing.meetingDate);
+    const sessionDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+
+    if (sessionDay.getTime() < today.getTime() && session.role !== "ADMIN") {
+      return {
+        success: false,
+        error: "Akses ditolak: Sesi latihan lampau telah diarsipkan. Hanya Admin yang berwenang mengubah status sesi lampau.",
+      };
+    }
+
     const meeting = await prisma.attendanceMeeting.update({
       where: { id: meetingId },
       data: { status },
@@ -188,25 +218,29 @@ export async function deleteMeetingAction(meetingId: string) {
       return { success: false, error: "Pertemuan tidak ditemukan." };
     }
 
-    // 1. Catat tanggal pertemuan yang dihapus agar syncRoutineMeetings tidak membangkitkannya kembali
-    if (meeting.meetingDate) {
-      const { addExcludedRoutineDate } = await import("@/lib/routineSchedule");
-      const d = new Date(meeting.meetingDate);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      await addExcludedRoutineDate(dateStr).catch(() => {});
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const mDate = new Date(meeting.meetingDate);
+    const sessionDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+
+    if (sessionDay.getTime() < today.getTime() && session.role !== "ADMIN") {
+      return {
+        success: false,
+        error: "Akses ditolak: Jadwal pertemuan lampau telah diarsipkan. Hanya Admin yang berwenang menghapus jadwal lampau.",
+      };
     }
 
-    // 2. Hapus log audit absensi spesifik pertemuan ini
+    // 1. Hapus log audit absensi spesifik pertemuan ini
     await prisma.attendanceAuditLog.deleteMany({
       where: { meetingId },
     }).catch(() => {});
 
-    // 3. Hapus seluruh data presensi anggota pada pertemuan ini secara eksplisit (mencegah error FK)
+    // 2. Hapus seluruh data presensi anggota pada pertemuan ini secara eksplisit (mencegah error FK)
     await prisma.attendanceRecord.deleteMany({
       where: { meetingId },
     }).catch(() => {});
 
-    // 4. Hapus data pertemuan
+    // 3. Hapus data pertemuan
     await prisma.attendanceMeeting.delete({
       where: { id: meetingId },
     });
@@ -401,11 +435,12 @@ export async function saveBatchAttendanceAction(data: {
       };
     }
 
-    // 2. Sesi masa lampau tidak boleh diubah oleh KETUA_REGU
-    if (sessionDay.getTime() < today.getTime() && session.role === "KETUA_REGU") {
+    // 2. Sesi masa lampau KHUSUS hanya boleh diubah/dikoreksi oleh ADMIN
+    const isPastSession = sessionDay.getTime() < today.getTime();
+    if (isPastSession && session.role !== "ADMIN") {
       return {
         success: false,
-        error: "Sesi latihan lampau telah dikunci. Hanya Pembina / Admin yang berwenang membuka koreksi data presensi yang telah lewat.",
+        error: "Akses ditolak: Sesi latihan lampau telah dikunci (Read-Only). Hanya Admin yang berwenang membuka dan mengoreksi data presensi yang telah lewat.",
       };
     }
 
@@ -431,7 +466,7 @@ export async function saveBatchAttendanceAction(data: {
                 previousStatus: existing.status,
                 newStatus: rec.status,
                 changedById: session.id,
-                reason: rec.notes || "Koreksi absensi latihan",
+                reason: rec.notes || (isPastSession ? "Koreksi sesi lampau oleh Admin" : "Koreksi absensi latihan"),
               },
             });
           }
@@ -462,7 +497,7 @@ export async function saveBatchAttendanceAction(data: {
               previousStatus: "BELUM_DIISI",
               newStatus: rec.status,
               changedById: session.id,
-              reason: rec.notes || "Pengisian absensi awal",
+              reason: rec.notes || (isPastSession ? "Pengisian susulan sesi lampau oleh Admin" : "Pengisian absensi awal"),
             },
           });
         }
@@ -489,9 +524,11 @@ export async function saveBatchAttendanceAction(data: {
       data: {
         userId: session.id,
         userName: session.name,
-        action: "SIMPAN_ABSENSI",
+        action: isPastSession ? "KOREKSI_ABSENSI_LAMPAU" : "SIMPAN_ABSENSI",
         module: "ABSENSI",
-        details: `Menyimpan ${records.length} data absensi untuk ${meeting.title}`,
+        details: isPastSession
+          ? `Admin mengoreksi ${records.length} data absensi pada sesi lampau ${meeting.title}`
+          : `Menyimpan ${records.length} data absensi untuk ${meeting.title}`,
       },
     }).catch(() => {});
 
@@ -540,12 +577,13 @@ export async function updateRoutineScheduleAction(formData: FormData): Promise<{
       location,
       titleTemplate,
       isActive,
+      excludedDates: [], // Reset daftar pengecualian saat admin menerapkan pengaturan jadwal rutin
     });
 
     // Jalankan sinkronisasi agar sesi terdekat dari hari yang baru dipilih langsung terbit
     let createdCount = 0;
     if (isActive) {
-      const syncResult = await syncRoutineMeetings(updated);
+      const syncResult = await syncRoutineMeetings(updated, { ignoreExcluded: true });
       createdCount = syncResult.createdCount;
     }
 
@@ -583,7 +621,7 @@ export async function syncRoutineMeetingsAction(): Promise<{
 
   try {
     const { syncRoutineMeetings } = await import("@/lib/routineSchedule");
-    const result = await syncRoutineMeetings();
+    const result = await syncRoutineMeetings(undefined, { ignoreExcluded: true });
     revalidatePath("/dashboard/attendance");
     return { success: true, createdCount: result.createdCount };
   } catch (err) {

@@ -26,23 +26,19 @@ export const DAY_NAMES = [
 const CONFIG_PATH = path.join(process.cwd(), "src", "data", "routine-schedule.json");
 
 const DEFAULT_CONFIG: RoutineScheduleConfig = {
-  dayOfWeek: 0, // Default: Minggu
-  dayName: "Minggu",
-  startTime: "14:00",
-  endTime: "16:30",
+  dayOfWeek: 5, // Default: Jumat
+  dayName: "Jumat",
+  startTime: "07:00",
+  endTime: "10:30",
   location: "Lapangan Utama Pangkalan",
   titleTemplate: "Latihan Rutin",
-  isActive: true,
+  isActive: false,
   excludedDates: [],
 };
 
 let _cachedScheduleConfig: RoutineScheduleConfig | null = null;
 
 export async function getRoutineScheduleConfig(): Promise<RoutineScheduleConfig> {
-  const cached = _cachedScheduleConfig;
-  if (cached) {
-    return cached;
-  }
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
@@ -53,7 +49,7 @@ export async function getRoutineScheduleConfig(): Promise<RoutineScheduleConfig>
   } catch (err) {
     console.warn("Notice: could not read routine schedule from file, using fallback:", err);
   }
-  return DEFAULT_CONFIG;
+  return _cachedScheduleConfig || DEFAULT_CONFIG;
 }
 
 export async function saveRoutineScheduleConfig(
@@ -127,7 +123,8 @@ export function getUpcomingRoutineDates(dayOfWeek: number, count: number = 2): D
  * untuk hari rutin yang dikonfigurasi.
  */
 export async function syncRoutineMeetings(
-  customConfig?: RoutineScheduleConfig
+  customConfig?: RoutineScheduleConfig,
+  options?: { ignoreExcluded?: boolean }
 ): Promise<{ createdCount: number }> {
   try {
     const config = customConfig || (await getRoutineScheduleConfig());
@@ -136,7 +133,11 @@ export async function syncRoutineMeetings(
       return { createdCount: 0 };
     }
 
-    const excluded = new Set(config.excludedDates || []);
+    const totalExisting = await prisma.attendanceMeeting.count();
+    const excluded = (options?.ignoreExcluded || totalExisting === 0)
+      ? new Set<string>()
+      : new Set(config.excludedDates || []);
+
     const targetDates = getUpcomingRoutineDates(config.dayOfWeek, 2);
     let createdCount = 0;
 
@@ -170,8 +171,8 @@ export async function syncRoutineMeetings(
           data: {
             title,
             meetingDate: targetDate,
-            startTime: config.startTime || "14:00",
-            endTime: config.endTime || "16:30",
+            startTime: config.startTime || "07:00",
+            endTime: config.endTime || "10:00",
             location: config.location || "Pangkalan",
             status: "TERJADWAL",
           },

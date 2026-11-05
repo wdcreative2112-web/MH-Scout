@@ -331,6 +331,11 @@ export function FinanceClientView({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400">{formatDate(tx.date)}</span>
                     <h3 className="font-bold text-sm text-slate-900 leading-tight">{tx.title}</h3>
+                    {tx.referenceNo && (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono text-slate-600 mt-0.5">
+                        Ref: {tx.referenceNo}
+                      </span>
+                    )}
                     <p className="text-xs text-slate-500 mt-0.5">{tx.category?.name || "Umum"}</p>
                   </div>
                   <div className="text-right">
@@ -413,7 +418,14 @@ export function FinanceClientView({
                     }`}
                   >
                     <td className="p-4 text-slate-600 whitespace-nowrap">{formatDate(tx.date)}</td>
-                    <td className="p-4 font-bold text-slate-900">{tx.title}</td>
+                    <td className="p-4">
+                      <div className="font-bold text-slate-900">{tx.title}</div>
+                      {tx.referenceNo && (
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono text-slate-600 mt-0.5">
+                          Ref: {tx.referenceNo}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4 text-slate-700">{tx.category?.name || "-"}</td>
                     <td className="p-4 text-slate-600">{tx.sourceOrRecipient || "-"}</td>
                     <td className="p-4 whitespace-nowrap">

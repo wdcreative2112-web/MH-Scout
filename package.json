@@ -14,7 +14,8 @@
     "prisma:seed": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs prisma/seed.ts",
     "db:push": "node scripts/db-push.js",
     "db:sync": "node scripts/db-sync.js",
-    "db:seed": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs prisma/seed.ts"
+    "db:seed": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs prisma/seed.ts",
+    "db:seed-donations": "node scripts/seed-donations.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

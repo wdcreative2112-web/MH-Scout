@@ -2,7 +2,7 @@ import React from "react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AttendanceClientView } from "./AttendanceClientView";
-import { getRoutineScheduleConfig, syncRoutineMeetings } from "@/lib/routineSchedule";
+import { getRoutineScheduleConfig } from "@/lib/routineSchedule";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +23,6 @@ export default async function AttendancePage({
   let lastAuditLog: any = null;
 
   try {
-    // Sinkronkan jadwal rutin otomatis jika ada sesi yang perlu diterbitkan
-    await syncRoutineMeetings().catch(() => {});
     routineConfig = await getRoutineScheduleConfig();
 
     const allMeetings = await prisma.attendanceMeeting.findMany({
