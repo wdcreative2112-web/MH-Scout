@@ -18,8 +18,15 @@ if (process.platform !== "win32" && process.env.PRISMA_QUERY_ENGINE_LIBRARY) {
   delete process.env.PRISMA_QUERY_ENGINE_LIBRARY;
 }
 
+const path = require("path");
+const prismaCli = path.join(__dirname, "..", "node_modules", "prisma", "build", "index.js");
+
 try {
-  execSync("npx prisma generate", { stdio: "inherit", env: process.env });
+  if (fs.existsSync(prismaCli)) {
+    execSync(`node "${prismaCli}" generate`, { stdio: "inherit", env: process.env });
+  } else {
+    execSync("npx prisma generate", { stdio: "inherit", env: process.env });
+  }
 } catch (error) {
   console.error("Failed to execute prisma generate:", error.message);
   process.exit(1);

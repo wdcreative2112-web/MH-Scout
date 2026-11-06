@@ -52,14 +52,26 @@ export default async function KetuaReguDashboardPage() {
     }
 
     if (group) {
-      members = await prisma.member.findMany({
-        where: { groupId: group.id, status: "AKTIF" },
-        orderBy: { fullName: "asc" },
-      });
+      const [mems, lMeeting, activities] = await Promise.all([
+        prisma.member.findMany({
+          where: { groupId: group.id, status: "AKTIF" },
+          orderBy: { fullName: "asc" },
+        }),
+        prisma.attendanceMeeting.findFirst({
+          orderBy: { meetingDate: "desc" },
+        }),
+        prisma.activity.findMany({
+          where: {
+            startDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          },
+          orderBy: { startDate: "asc" },
+          take: 3,
+        }),
+      ]);
 
-      latestMeeting = await prisma.attendanceMeeting.findFirst({
-        orderBy: { meetingDate: "desc" },
-      });
+      members = mems;
+      latestMeeting = lMeeting;
+      upcomingActivities = activities;
 
       if (latestMeeting) {
         meetingRecords = await prisma.attendanceRecord.findMany({
@@ -70,14 +82,6 @@ export default async function KetuaReguDashboardPage() {
           include: { member: true },
         });
       }
-
-      upcomingActivities = await prisma.activity.findMany({
-        where: {
-          startDate: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        },
-        orderBy: { startDate: "asc" },
-        take: 3,
-      });
     }
   } catch (err) {
     console.error("Ketua Regu Dashboard fetch error:", err);

@@ -427,8 +427,8 @@ export async function saveBatchAttendanceAction(data: {
     const mDate = new Date(meeting.meetingDate);
     const sessionDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
 
-    // 1. Sesi masa depan dilarang diisi sebelum hari H tiba
-    if (sessionDay.getTime() > today.getTime()) {
+    // 1. Sesi masa depan dilarang diisi sebelum hari H tiba (Kecuali Admin yang memiliki wewenang penuh)
+    if (sessionDay.getTime() > today.getTime() && session.role !== "ADMIN") {
       return {
         success: false,
         error: "Sesi latihan ini belum dibuka. Pengisian presensi hanya dapat dilakukan tepat pada hari pelaksanaan pertemuan yang telah ditentukan.",
@@ -444,73 +444,90 @@ export async function saveBatchAttendanceAction(data: {
       };
     }
 
-    // Run database transactions for atomic persistence
-    await prisma.$transaction(async (tx: any) => {
-      for (const rec of records) {
-        const existing = await tx.attendanceRecord.findUnique({
-          where: {
-            meetingId_memberId: {
-              meetingId,
-              memberId: rec.memberId,
-            },
-          },
-        });
+    // Ambil data absensi yang sudah tersimpan untuk pertemuan ini sekaligus (Batch Query)
+    const existingRecords = await prisma.attendanceRecord.findMany({
+      where: {
+        meetingId,
+        memberId: { in: records.map((r) => r.memberId) },
+      },
+    });
+    const existingMap = new Map(existingRecords.map((r) => [r.memberId, r]));
 
-        if (existing) {
-          // Record audit log if status changed or notes updated
-          if (existing.status !== rec.status) {
-            await tx.attendanceAuditLog.create({
-              data: {
+    // Run database transactions for atomic persistence dengan timeout lebih aman untuk Neon Cloud
+    await prisma.$transaction(
+      async (tx: any) => {
+        const auditLogsToCreate: any[] = [];
+
+        for (const rec of records) {
+          const existing = existingMap.get(rec.memberId);
+
+          if (existing) {
+            // Record audit log if status changed
+            if (existing.status !== rec.status) {
+              auditLogsToCreate.push({
                 meetingId,
                 memberId: rec.memberId,
                 previousStatus: existing.status,
                 newStatus: rec.status,
                 changedById: session.id,
                 reason: rec.notes || (isPastSession ? "Koreksi sesi lampau oleh Admin" : "Koreksi absensi latihan"),
+              });
+            }
+
+            await tx.attendanceRecord.update({
+              where: { id: existing.id },
+              data: {
+                status: rec.status,
+                notes: rec.notes !== undefined ? rec.notes : existing.notes,
+                recordedById: session.id,
               },
             });
-          }
+          } else {
+            await tx.attendanceRecord.create({
+              data: {
+                meetingId,
+                memberId: rec.memberId,
+                status: rec.status,
+                notes: rec.notes || null,
+                recordedById: session.id,
+              },
+            });
 
-          await tx.attendanceRecord.update({
-            where: { id: existing.id },
-            data: {
-              status: rec.status,
-              notes: rec.notes !== undefined ? rec.notes : existing.notes,
-              recordedById: session.id,
-            },
-          });
-        } else {
-          await tx.attendanceRecord.create({
-            data: {
-              meetingId,
-              memberId: rec.memberId,
-              status: rec.status,
-              notes: rec.notes || null,
-              recordedById: session.id,
-            },
-          });
-
-          await tx.attendanceAuditLog.create({
-            data: {
+            auditLogsToCreate.push({
               meetingId,
               memberId: rec.memberId,
               previousStatus: "BELUM_DIISI",
               newStatus: rec.status,
               changedById: session.id,
               reason: rec.notes || (isPastSession ? "Pengisian susulan sesi lampau oleh Admin" : "Pengisian absensi awal"),
-            },
+            });
+          }
+        }
+
+        // Simpan log audit secara aman (tidak menggagalkan penyimpanan absensi jika audit gagal)
+        if (auditLogsToCreate.length > 0) {
+          try {
+            await tx.attendanceAuditLog.createMany({
+              data: auditLogsToCreate,
+            });
+          } catch (auditErr) {
+            console.warn("Attendance audit log notice:", auditErr);
+          }
+        }
+
+        // Update status pertemuan menjadi SELESAI jika sebelumnya masih TERJADWAL
+        if (meeting.status === "TERJADWAL") {
+          await tx.attendanceMeeting.update({
+            where: { id: meetingId },
+            data: { status: "SELESAI" },
           });
         }
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
       }
-
-      // Update status pertemuan menjadi SELESAI jika sebelumnya masih TERJADWAL
-      if (meeting.status === "TERJADWAL") {
-        await tx.attendanceMeeting.update({
-          where: { id: meetingId },
-          data: { status: "SELESAI" },
-        });
-      }
-    });
+    );
 
     // Sinkronkan denda untuk status ALPA secara otomatis
     try {
@@ -537,7 +554,7 @@ export async function saveBatchAttendanceAction(data: {
     return { success: true };
   } catch (err: any) {
     console.error("Save attendance error:", err);
-    return { success: false, error: "Gagal menyimpan data absensi." };
+    return { success: false, error: err?.message || "Gagal menyimpan data absensi." };
   }
 }
 

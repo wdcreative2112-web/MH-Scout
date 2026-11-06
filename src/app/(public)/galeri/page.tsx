@@ -5,7 +5,7 @@ import { formatDate } from "@/lib/utils";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { Image as ImageIcon, Calendar, ArrowRight, Camera } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function GaleriListPage() {
   let albums: any[] = [];

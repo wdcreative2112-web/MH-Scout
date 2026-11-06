@@ -8,7 +8,7 @@ import {
 } from "@/lib/donations";
 import { DonationClientView } from "@/components/public/DonationClientView";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Donasi & Infak Kepanduan — MH SCOUT",

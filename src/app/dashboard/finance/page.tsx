@@ -25,24 +25,6 @@ export default async function FinancePage({
   let totalExpense = 0;
 
   try {
-    const profile = await prisma.organizationProfile.findFirst();
-    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
-
-    categories = await prisma.financeCategory.findMany({
-      orderBy: { name: "asc" },
-    });
-
-    const allValid = await prisma.financialTransaction.findMany({
-      where: { status: "VALID" },
-      select: { type: true, amount: true },
-    });
-
-    allValid.forEach((t) => {
-      const a = Number(t.amount);
-      if (t.type === "PEMASUKAN") totalIncome += a;
-      else if (t.type === "PENGELUARAN") totalExpense += a;
-    });
-
     const where: any = {};
     if (type) where.type = type;
     if (categoryId) where.categoryId = categoryId;
@@ -53,16 +35,39 @@ export default async function FinancePage({
       ];
     }
 
-    const rawTransactions = await prisma.financialTransaction.findMany({
-      where,
-      orderBy: { date: "desc" },
-      include: {
-        category: true,
-        createdBy: true,
-      },
-    });
+    const [
+      profile,
+      cats,
+      incomeAgg,
+      expenseAgg,
+      rawTransactions,
+    ] = await Promise.all([
+      prisma.organizationProfile.findFirst(),
+      prisma.financeCategory.findMany({
+        orderBy: { name: "asc" },
+      }),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PEMASUKAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PENGELUARAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.findMany({
+        where,
+        orderBy: { date: "desc" },
+        include: {
+          category: true,
+          createdBy: true,
+        },
+      }),
+    ]);
 
-    categories = JSON.parse(JSON.stringify(categories));
+    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
+    totalIncome = Number(incomeAgg._sum.amount || 0);
+    totalExpense = Number(expenseAgg._sum.amount || 0);
+    categories = JSON.parse(JSON.stringify(cats));
 
     transactions = JSON.parse(
       JSON.stringify(

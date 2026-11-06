@@ -40,54 +40,63 @@ export default async function AdminDashboardPage() {
   let recentAudits: any[] = [];
 
   try {
-    const profile = await prisma.organizationProfile.findFirst();
-    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
-
-    const [mCount, gCount, lCount] = await Promise.all([
+    const [
+      profile,
+      mCount,
+      gCount,
+      lCount,
+      incomeAgg,
+      expenseAgg,
+      recentTxs,
+      recentMems,
+      upcomingMtgs,
+      recentLogs,
+    ] = await Promise.all([
+      prisma.organizationProfile.findFirst(),
       prisma.member.count({ where: { status: "AKTIF" } }),
       prisma.scoutGroup.count({ where: { isActive: true } }),
       prisma.leader.count({ where: { isActive: true } }),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PEMASUKAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PENGELUARAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.findMany({
+        take: 4,
+        orderBy: { date: "desc" },
+        include: { category: true },
+      }),
+      prisma.member.findMany({
+        take: 4,
+        orderBy: { createdAt: "desc" },
+        include: { group: true },
+      }),
+      prisma.attendanceMeeting.findMany({
+        take: 3,
+        orderBy: { meetingDate: "desc" },
+        include: {
+          _count: { select: { records: true } },
+        },
+      }),
+      prisma.auditLog.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+      }),
     ]);
+
+    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
     membersCount = mCount;
     groupsCount = gCount;
     leadersCount = lCount;
-
-    // Financial totals
-    const transactions = await prisma.financialTransaction.findMany({
-      where: { status: "VALID" },
-      select: { type: true, amount: true },
-    });
-
-    transactions.forEach((tx) => {
-      const amt = Number(tx.amount);
-      if (tx.type === "PEMASUKAN") totalIncome += amt;
-      else if (tx.type === "PENGELUARAN") totalExpense += amt;
-    });
-
-    recentTransactions = await prisma.financialTransaction.findMany({
-      take: 4,
-      orderBy: { date: "desc" },
-      include: { category: true },
-    });
-
-    recentMembers = await prisma.member.findMany({
-      take: 4,
-      orderBy: { createdAt: "desc" },
-      include: { group: true },
-    });
-
-    upcomingMeetings = await prisma.attendanceMeeting.findMany({
-      take: 3,
-      orderBy: { meetingDate: "desc" },
-      include: {
-        _count: { select: { records: true } },
-      },
-    });
-
-    recentAudits = await prisma.auditLog.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-    });
+    totalIncome = Number(incomeAgg._sum.amount || 0);
+    totalExpense = Number(expenseAgg._sum.amount || 0);
+    recentTransactions = recentTxs;
+    recentMembers = recentMems;
+    upcomingMeetings = upcomingMtgs;
+    recentAudits = recentLogs;
   } catch {
     // DB error fallback
   }

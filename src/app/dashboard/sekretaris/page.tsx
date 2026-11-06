@@ -35,35 +35,38 @@ export default async function SekretarisDashboardPage() {
   let recentActivities: any[] = [];
 
   try {
-    const [mCount, gCount] = await Promise.all([
+    const [
+      mCount,
+      gCount,
+      recMeetings,
+      dNews,
+      dArt,
+      recActivities,
+    ] = await Promise.all([
       prisma.member.count({ where: { status: "AKTIF" } }),
       prisma.scoutGroup.count({ where: { isActive: true } }),
-    ]);
-    membersCount = mCount;
-    groupsCount = gCount;
-
-    recentMeetings = await prisma.attendanceMeeting.findMany({
-      take: 4,
-      orderBy: { meetingDate: "desc" },
-      include: {
-        _count: { select: { records: true } },
-      },
-    });
-
-    // Check meetings that have 0 records
-    unrecordedMeetings = recentMeetings.filter((m) => m._count.records === 0);
-
-    const [dNews, dArt] = await Promise.all([
+      prisma.attendanceMeeting.findMany({
+        take: 4,
+        orderBy: { meetingDate: "desc" },
+        include: {
+          _count: { select: { records: true } },
+        },
+      }),
       prisma.news.count({ where: { status: "DRAF" } }),
       prisma.article.count({ where: { status: "DRAF" } }),
+      prisma.activity.findMany({
+        take: 3,
+        orderBy: { startDate: "desc" },
+      }),
     ]);
+
+    membersCount = mCount;
+    groupsCount = gCount;
+    recentMeetings = recMeetings;
+    unrecordedMeetings = recentMeetings.filter((m) => m._count.records === 0);
     draftNewsCount = dNews;
     draftArticleCount = dArt;
-
-    recentActivities = await prisma.activity.findMany({
-      take: 3,
-      orderBy: { startDate: "desc" },
-    });
+    recentActivities = recActivities;
   } catch {
     // DB error fallback
   }

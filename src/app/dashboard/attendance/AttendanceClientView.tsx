@@ -303,13 +303,13 @@ export function AttendanceClientView({
   }, [activeSessionDay, today]);
 
   // Global attendance lock logic:
-  // - Future sessions: locked until meeting day
+  // - Future sessions: locked until meeting day (kecuali ADMIN)
   // - Past sessions: strictly locked for non-Admin (only ADMIN can edit/correct past sessions)
   // - Today session: open for attendance recording
   const isAttendanceLocked = useMemo(() => {
     if (!activeMeeting) return true;
     if (activeMeeting.status === "DIBATALKAN") return true;
-    if (isFutureSession) return true;
+    if (isFutureSession && userRole !== "ADMIN") return true;
     if (isPastSession && userRole !== "ADMIN") return true;
     return false;
   }, [activeMeeting, isFutureSession, isPastSession, userRole]);
@@ -1537,7 +1537,7 @@ export function AttendanceClientView({
               </div>
             )}
 
-            {activeMeeting && isFutureSession && activeMeeting.status !== "DIBATALKAN" && (
+            {activeMeeting && isFutureSession && activeMeeting.status !== "DIBATALKAN" && userRole !== "ADMIN" && (
               <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-sky-950 flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4 text-sky-600 shrink-0" />
@@ -1547,6 +1547,20 @@ export function AttendanceClientView({
                 </div>
                 <span className="px-2 py-0.5 rounded-md bg-sky-200 text-sky-900 text-[10px] font-black uppercase shrink-0">
                   Terkunci
+                </span>
+              </div>
+            )}
+
+            {activeMeeting && isFutureSession && activeMeeting.status !== "DIBATALKAN" && userRole === "ADMIN" && (
+              <div className="p-3 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="font-semibold">
+                    Hak Akses Admin: Sesi Terjadwal Mendatang ({formatDayDate(activeMeeting.meetingDate)}). Anda dapat mengisi atau mempersiapkan presensi ini lebih awal.
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-200 text-indigo-900 text-[10px] font-black uppercase shrink-0">
+                  Akses Admin
                 </span>
               </div>
             )}

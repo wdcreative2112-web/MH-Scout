@@ -32,30 +32,36 @@ export default async function BendaharaDashboardPage() {
   let duesPendingCount = 0;
 
   try {
-    const profile = await prisma.organizationProfile.findFirst();
-    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
-
-    const txs = await prisma.financialTransaction.findMany({
-      where: { status: "VALID" },
-      select: { type: true, amount: true },
-    });
-
-    txs.forEach((t) => {
-      const amt = Number(t.amount);
-      if (t.type === "PEMASUKAN") totalIncome += amt;
-      else if (t.type === "PENGELUARAN") totalExpense += amt;
-    });
-
-    recentTransactions = await prisma.financialTransaction.findMany({
-      take: 5,
-      orderBy: { date: "desc" },
-      include: { category: true },
-    });
-
-    const [paid, pending] = await Promise.all([
+    const [
+      profile,
+      incomeAgg,
+      expenseAgg,
+      recTxs,
+      paid,
+      pending,
+    ] = await Promise.all([
+      prisma.organizationProfile.findFirst(),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PEMASUKAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.aggregate({
+        where: { status: "VALID", type: "PENGELUARAN" },
+        _sum: { amount: true },
+      }),
+      prisma.financialTransaction.findMany({
+        take: 5,
+        orderBy: { date: "desc" },
+        include: { category: true },
+      }),
       prisma.memberDues.count({ where: { status: "LUNAS" } }),
       prisma.memberDues.count({ where: { status: "BELUM_LUNAS" } }),
     ]);
+
+    initialBalance = profile?.initialBalance ? Number(profile.initialBalance) : 0;
+    totalIncome = Number(incomeAgg._sum.amount || 0);
+    totalExpense = Number(expenseAgg._sum.amount || 0);
+    recentTransactions = recTxs;
     duesPaidCount = paid;
     duesPendingCount = pending;
   } catch {

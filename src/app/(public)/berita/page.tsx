@@ -6,7 +6,7 @@ import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { Newspaper, ArrowRight, Calendar, User, Search, Flame } from "lucide-react";
 import { ShareBar } from "@/components/public/ShareBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function BeritaListPage({
   searchParams,
@@ -19,10 +19,6 @@ export default async function BeritaListPage({
   let categories: any[] = [];
 
   try {
-    categories = await prisma.newsCategory.findMany({
-      orderBy: { name: "asc" },
-    });
-
     const where: any = {
       status: "TERBIT",
     };
@@ -38,11 +34,19 @@ export default async function BeritaListPage({
       where.category = { slug: kategori };
     }
 
-    newsList = await prisma.news.findMany({
-      where,
-      orderBy: { publishedAt: "desc" },
-      include: { category: true, author: true },
-    });
+    const [cats, news] = await Promise.all([
+      prisma.newsCategory.findMany({
+        orderBy: { name: "asc" },
+      }),
+      prisma.news.findMany({
+        where,
+        orderBy: { publishedAt: "desc" },
+        include: { category: true, author: true },
+      }),
+    ]);
+
+    categories = cats;
+    newsList = news;
   } catch {
     // fallback
   }

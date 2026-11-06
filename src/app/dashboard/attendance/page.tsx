@@ -23,14 +23,39 @@ export default async function AttendancePage({
   let lastAuditLog: any = null;
 
   try {
-    routineConfig = await getRoutineScheduleConfig();
+    const [
+      rConfig,
+      allMeetings,
+      allGroups,
+      allMembers,
+    ] = await Promise.all([
+      getRoutineScheduleConfig(),
+      prisma.attendanceMeeting.findMany({
+        orderBy: { meetingDate: "desc" },
+        include: {
+          records: {
+            select: {
+              id: true,
+              memberId: true,
+              status: true,
+            },
+          },
+        },
+      }),
+      prisma.scoutGroup.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.member.findMany({
+        where: { status: "AKTIF" },
+        orderBy: { fullName: "asc" },
+        include: { group: true },
+      }),
+    ]);
 
-    const allMeetings = await prisma.attendanceMeeting.findMany({
-      orderBy: { meetingDate: "desc" },
-      include: {
-        records: true,
-      },
-    });
+    routineConfig = rConfig;
+    groups = allGroups;
+    members = allMembers;
 
     // Bersihkan sesi ganda pada tanggal yang sama yang belum memiliki data absensi
     const seenDates = new Set<string>();
@@ -87,17 +112,6 @@ export default async function AttendancePage({
     });
 
     meetings = uniqueMeetings;
-
-    groups = await prisma.scoutGroup.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-    });
-
-    members = await prisma.member.findMany({
-      where: { status: "AKTIF" },
-      orderBy: { fullName: "asc" },
-      include: { group: true },
-    });
 
     const todayMeeting = meetings.find((m) => {
       const md = new Date(m.meetingDate);

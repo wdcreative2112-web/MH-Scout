@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { ShareBar } from "@/components/public/ShareBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function HomePage() {
   // Query live data with safe fallbacks
@@ -38,44 +38,58 @@ export default async function HomePage() {
   };
 
   try {
-    profile = await prisma.organizationProfile.findFirst();
-    recentNews = await prisma.news.findMany({
-      where: { status: "TERBIT" },
-      orderBy: { publishedAt: "desc" },
-      take: 3,
-      include: { category: true },
-    });
-    recentArticles = await prisma.article.findMany({
-      where: { status: "TERBIT" },
-      orderBy: { publishedAt: "desc" },
-      take: 3,
-      include: { category: true },
-    });
-    recentAlbums = await prisma.galleryAlbum.findMany({
-      where: { isPublished: true },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-      include: {
-        photos: {
-          where: { isPublished: true },
-          take: 1,
+    const [
+      orgProfile,
+      news,
+      articles,
+      albums,
+      activities,
+      mCount,
+      gCount,
+      lCount,
+    ] = await Promise.all([
+      prisma.organizationProfile.findFirst(),
+      prisma.news.findMany({
+        where: { status: "TERBIT" },
+        orderBy: { publishedAt: "desc" },
+        take: 3,
+        include: { category: true },
+      }),
+      prisma.article.findMany({
+        where: { status: "TERBIT" },
+        orderBy: { publishedAt: "desc" },
+        take: 3,
+        include: { category: true },
+      }),
+      prisma.galleryAlbum.findMany({
+        where: { isPublished: true },
+        orderBy: { createdAt: "desc" },
+        take: 4,
+        include: {
+          photos: {
+            where: { isPublished: true },
+            take: 1,
+          },
         },
-      },
-    });
-    upcomingActivities = await prisma.activity.findMany({
-      where: {
-        isPublic: true,
-        status: { in: ["TERJADWAL", "BERJALAN"] },
-      },
-      orderBy: { startDate: "asc" },
-      take: 2,
-    });
-
-    const [mCount, gCount, lCount] = await Promise.all([
+      }),
+      prisma.activity.findMany({
+        where: {
+          isPublic: true,
+          status: { in: ["TERJADWAL", "BERJALAN"] },
+        },
+        orderBy: { startDate: "asc" },
+        take: 2,
+      }),
       prisma.member.count({ where: { status: "AKTIF" } }),
       prisma.scoutGroup.count({ where: { isActive: true } }),
       prisma.leader.count({ where: { isActive: true } }),
     ]);
+
+    profile = orgProfile;
+    recentNews = news;
+    recentArticles = articles;
+    recentAlbums = albums;
+    upcomingActivities = activities;
     stats = {
       membersCount: mCount,
       groupsCount: gCount,

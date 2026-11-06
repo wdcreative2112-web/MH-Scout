@@ -7,7 +7,7 @@ import { Network, Building, ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { mergeStructureWithTemplate } from "@/lib/structure-constants";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function PublicStructurePage() {
   let profile = null;

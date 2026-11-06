@@ -6,7 +6,7 @@ import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { BookOpen, ArrowRight, Search, Bookmark, Sparkles } from "lucide-react";
 import { ShareBar } from "@/components/public/ShareBar";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ArtikelListPage({
   searchParams,
@@ -19,10 +19,6 @@ export default async function ArtikelListPage({
   let categories: any[] = [];
 
   try {
-    categories = await prisma.articleCategory.findMany({
-      orderBy: { name: "asc" },
-    });
-
     const where: any = {
       status: "TERBIT",
     };
@@ -38,11 +34,19 @@ export default async function ArtikelListPage({
       where.category = { slug: kategori };
     }
 
-    articles = await prisma.article.findMany({
-      where,
-      orderBy: { publishedAt: "desc" },
-      include: { category: true, author: true },
-    });
+    const [cats, arts] = await Promise.all([
+      prisma.articleCategory.findMany({
+        orderBy: { name: "asc" },
+      }),
+      prisma.article.findMany({
+        where,
+        orderBy: { publishedAt: "desc" },
+        include: { category: true, author: true },
+      }),
+    ]);
+
+    categories = cats;
+    articles = arts;
   } catch {
     // DB error fallback
   }

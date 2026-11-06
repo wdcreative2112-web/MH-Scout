@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { PublicGroupsView } from "./PublicGroupsView";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Regu & Sangga Kepanduan — Gerakan Pramuka",

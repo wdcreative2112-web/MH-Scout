@@ -6,7 +6,7 @@ import { Target, Heart, Award, MapPin, Mail, Phone, Building, Network, ArrowRigh
 
 import { mergeStructureWithTemplate } from "@/lib/structure-constants";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ProfilPage() {
   let profile = null;
