@@ -57,6 +57,11 @@ import {
   FileSpreadsheet,
   CheckCheck,
   LayoutGrid,
+  List,
+  History,
+  CalendarDays,
+  ChevronLeft,
+  Filter,
   ArrowLeft,
   ChevronRight,
   ArrowUpRight,
@@ -94,6 +99,20 @@ export interface LeaveRequestItem {
   submittedAt: string;
 }
 
+export interface AttendanceAuditLogItem {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberNumber: string;
+  groupName: string;
+  previousStatus: string | null;
+  newStatus: string;
+  reason: string | null;
+  changedByName: string;
+  changedByRole: string;
+  createdAt: string;
+}
+
 interface AttendanceClientViewProps {
   meetings: any[];
   members: any[];
@@ -113,6 +132,7 @@ interface AttendanceClientViewProps {
   initialFineAmount?: number;
   initialLeaveRequests?: LeaveRequestItem[];
   initialTab?: "MENU" | "SHEET" | "SCHEDULE" | "RECAP" | "FINES";
+  auditLogs?: AttendanceAuditLogItem[];
   lastAuditLog?: {
     userName: string;
     userRole: string;
@@ -149,6 +169,7 @@ export function AttendanceClientView({
   initialFineAmount = 5000,
   initialLeaveRequests = [],
   initialTab = "MENU",
+  auditLogs = [],
   lastAuditLog = null,
 }: AttendanceClientViewProps) {
   const router = useRouter();
@@ -258,6 +279,14 @@ export function AttendanceClientView({
   const [selectedRoutineDay, setSelectedRoutineDay] = useState<number>(currentRoutine.dayOfWeek);
   const [editMeetingModal, setEditMeetingModal] = useState<any | null>(null);
   const [deleteMeetingConfirm, setDeleteMeetingConfirm] = useState<any | null>(null);
+  const [showAuditTrailModal, setShowAuditTrailModal] = useState(false);
+
+  // Schedule filtering, view mode & pagination
+  const [scheduleViewMode, setScheduleViewMode] = useState<"GRID" | "TABLE">("GRID");
+  const [schedulePeriodFilter, setSchedulePeriodFilter] = useState<string>("ALL");
+  const [scheduleAttendanceFilter, setScheduleAttendanceFilter] = useState<"ALL" | "FILLED" | "UNFILLED">("ALL");
+  const [schedulePage, setSchedulePage] = useState<number>(1);
+  const [schedulePageSize, setSchedulePageSize] = useState<number | "ALL">(9);
 
   // Loading & Alert feedback
   const [actionLoading, setActionLoading] = useState(false);
@@ -357,13 +386,76 @@ export function AttendanceClientView({
     });
   }, [meetings, today]);
 
+  const MONTH_NAMES = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  const formatMonthYearLabel = (year: number, month: number) => {
+    return `${MONTH_NAMES[month]} ${year}`;
+  };
+
+  const thisMonthKey = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+
+  const lastMonthKey = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+
+  const availableMonths = useMemo(() => {
+    const map = new Map<string, { label: string; count: number }>();
+    for (const m of meetings) {
+      const d = new Date(m.meetingDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(key, {
+          label: formatMonthYearLabel(d.getFullYear(), d.getMonth()),
+          count: 1,
+        });
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [meetings]);
+
   // Schedule filtering & searching
   const [scheduleStatusFilter, setScheduleStatusFilter] = useState<"ALL" | "TERJADWAL" | "SELESAI" | "DIBATALKAN">("ALL");
   const [scheduleSearch, setScheduleSearch] = useState("");
 
   const filteredMeetings = useMemo(() => {
     return sortedMeetings.filter((m) => {
+      // 1. Status Filter
       if (scheduleStatusFilter !== "ALL" && m.status !== scheduleStatusFilter) return false;
+
+      // 2. Attendance Status Filter
+      const recCount = m.records?.length || 0;
+      if (scheduleAttendanceFilter === "FILLED" && recCount === 0) return false;
+      if (scheduleAttendanceFilter === "UNFILLED" && recCount > 0) return false;
+
+      // 3. Period Filter
+      const md = new Date(m.meetingDate);
+      const mDay = new Date(md.getFullYear(), md.getMonth(), md.getDate(), 0, 0, 0, 0).getTime();
+      const monthKey = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, "0")}`;
+
+      if (schedulePeriodFilter === "THIS_MONTH") {
+        if (monthKey !== thisMonthKey) return false;
+      } else if (schedulePeriodFilter === "LAST_MONTH") {
+        if (monthKey !== lastMonthKey) return false;
+      } else if (schedulePeriodFilter === "UPCOMING") {
+        if (mDay < today.getTime()) return false;
+      } else if (schedulePeriodFilter === "PAST") {
+        if (mDay >= today.getTime()) return false;
+      } else if (schedulePeriodFilter !== "ALL" && schedulePeriodFilter.startsWith("20")) {
+        if (monthKey !== schedulePeriodFilter) return false;
+      }
+
+      // 4. Text Search
       if (scheduleSearch) {
         const q = scheduleSearch.toLowerCase();
         const matchTitle = m.title.toLowerCase().includes(q);
@@ -373,7 +465,66 @@ export function AttendanceClientView({
       }
       return true;
     });
-  }, [sortedMeetings, scheduleStatusFilter, scheduleSearch]);
+  }, [
+    sortedMeetings,
+    scheduleStatusFilter,
+    scheduleAttendanceFilter,
+    schedulePeriodFilter,
+    scheduleSearch,
+    thisMonthKey,
+    lastMonthKey,
+    today,
+  ]);
+
+  const totalSchedulePages = useMemo(() => {
+    if (schedulePageSize === "ALL") return 1;
+    return Math.max(1, Math.ceil(filteredMeetings.length / schedulePageSize));
+  }, [filteredMeetings.length, schedulePageSize]);
+
+  useEffect(() => {
+    if (schedulePage > totalSchedulePages) {
+      setSchedulePage(1);
+    }
+  }, [totalSchedulePages, schedulePage]);
+
+  const paginatedMeetings = useMemo(() => {
+    if (schedulePageSize === "ALL") return filteredMeetings;
+    const start = (schedulePage - 1) * schedulePageSize;
+    return filteredMeetings.slice(start, start + schedulePageSize);
+  }, [filteredMeetings, schedulePage, schedulePageSize]);
+
+  // Grouped meetings for <select> in SHEET tab
+  const groupedMeetingsForSelect = useMemo(() => {
+    const upcomingAndToday: any[] = [];
+    const thisMonthPast: any[] = [];
+    const olderMonthsMap = new Map<string, { label: string; meetings: any[] }>();
+
+    for (const m of sortedMeetings) {
+      const mDate = new Date(m.meetingDate);
+      const mDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+      const mKey = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, "0")}`;
+
+      if (mDay.getTime() >= today.getTime()) {
+        upcomingAndToday.push(m);
+      } else if (mKey === thisMonthKey) {
+        thisMonthPast.push(m);
+      } else {
+        const existing = olderMonthsMap.get(mKey);
+        const label = formatMonthYearLabel(mDate.getFullYear(), mDate.getMonth());
+        if (existing) {
+          existing.meetings.push(m);
+        } else {
+          olderMonthsMap.set(mKey, { label, meetings: [m] });
+        }
+      }
+    }
+
+    return {
+      upcomingAndToday,
+      thisMonthPast,
+      olderMonths: Array.from(olderMonthsMap.entries()).sort((a, b) => b[0].localeCompare(a[0])),
+    };
+  }, [sortedMeetings, today, thisMonthKey]);
 
   // Filter members displayed in current sheet
   const displayedMembers = useMemo(() => {
@@ -1050,6 +1201,38 @@ export function AttendanceClientView({
     document.body.removeChild(link);
   };
 
+  const renderMeetingOption = (m: any) => {
+    const mDate = new Date(m.meetingDate);
+    const mDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
+    const isToday = mDay.getTime() === today.getTime();
+    const isFuture = mDay.getTime() > today.getTime();
+    const recCount = m.records?.length || 0;
+
+    let titlePart = "";
+    if (m.title && !m.title.toLowerCase().startsWith("latihan rutin minggu ke-")) {
+      titlePart = ` — ${m.title}`;
+    }
+
+    let statusBadge = "";
+    if (m.status === "DIBATALKAN") {
+      statusBadge = " [Dibatalkan]";
+    } else if (isToday) {
+      statusBadge = recCount > 0 ? " [Hari Ini • Terisi]" : " [Hari Ini]";
+    } else if (isFuture) {
+      statusBadge = " [Mendatang]";
+    } else if (recCount > 0) {
+      statusBadge = " [Terisi]";
+    } else {
+      statusBadge = " [Belum Diisi]";
+    }
+
+    return (
+      <option key={m.id} value={m.id}>
+        {isToday ? "🟢 " : ""}{formatDayDate(m.meetingDate)}{titlePart}{statusBadge}
+      </option>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* GLOBAL FEEDBACK NOTIFICATIONS */}
@@ -1416,37 +1599,24 @@ export function AttendanceClientView({
                     onChange={(e) => handleChangeMeeting(e.target.value)}
                     className="w-full pl-3.5 pr-10 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-slate-50/70 text-slate-900 shadow-2xs"
                   >
-                    {sortedMeetings.map((m) => {
-                      const mDate = new Date(m.meetingDate);
-                      const mDay = new Date(mDate.getFullYear(), mDate.getMonth(), mDate.getDate(), 0, 0, 0, 0);
-                      const isToday = mDay.getTime() === today.getTime();
-                      const isFuture = mDay.getTime() > today.getTime();
-                      const recCount = m.records?.length || 0;
+                    {groupedMeetingsForSelect.upcomingAndToday.length > 0 && (
+                      <optgroup label="🟢 Sesi Hari Ini & Mendatang">
+                        {groupedMeetingsForSelect.upcomingAndToday.map((m) => renderMeetingOption(m))}
+                      </optgroup>
+                    )}
 
-                      let titlePart = "";
-                      if (m.title && !m.title.toLowerCase().startsWith("latihan rutin minggu ke-")) {
-                        titlePart = ` — ${m.title}`;
-                      }
+                    {groupedMeetingsForSelect.thisMonthPast.length > 0 && (
+                      <optgroup label={`📁 Sesi Bulan Ini (${formatMonthYearLabel(today.getFullYear(), today.getMonth())})`}>
+                        {groupedMeetingsForSelect.thisMonthPast.map((m) => renderMeetingOption(m))}
+                      </optgroup>
+                    )}
 
-                      let statusBadge = "";
-                      if (m.status === "DIBATALKAN") {
-                        statusBadge = " [Dibatalkan]";
-                      } else if (isToday) {
-                        statusBadge = recCount > 0 ? " [Hari Ini • Terisi]" : " [Hari Ini]";
-                      } else if (isFuture) {
-                        statusBadge = " [Mendatang]";
-                      } else if (recCount > 0) {
-                        statusBadge = " [Terisi]";
-                      } else {
-                        statusBadge = " [Belum Diisi]";
-                      }
+                    {groupedMeetingsForSelect.olderMonths.map(([key, group]) => (
+                      <optgroup key={key} label={`📦 Arsip ${group.label} (${group.meetings.length} Sesi)`}>
+                        {group.meetings.map((m: any) => renderMeetingOption(m))}
+                      </optgroup>
+                    ))}
 
-                      return (
-                        <option key={m.id} value={m.id}>
-                          {isToday ? "🟢 " : ""}{formatDayDate(m.meetingDate)}{titlePart}{statusBadge}
-                        </option>
-                      );
-                    })}
                     {sortedMeetings.length === 0 && <option value="">(Belum ada jadwal pertemuan)</option>}
                   </select>
                 </div>
@@ -1466,7 +1636,7 @@ export function AttendanceClientView({
                   </div>
                 ) : (
                   activeMeeting && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider border ${
                           activeMeeting.status === "SELESAI"
@@ -1483,10 +1653,23 @@ export function AttendanceClientView({
                         <button
                           type="button"
                           onClick={() => setEditMeetingModal(activeMeeting)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs inline-flex items-center gap-1.5 transition-colors border border-slate-200/60"
+                          title="Edit judul, tanggal, jam, atau lokasi pertemuan lampau / aktif ini"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          <span>Ubah Info Sesi</span>
+                          <span>Edit Sesi Ini</span>
+                        </button>
+                      )}
+
+                      {userRole === "ADMIN" && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAuditTrailModal(true)}
+                          className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs inline-flex items-center gap-1.5 transition-colors border border-purple-200/80 shadow-2xs"
+                          title="Buka riwayat audit perubahan presensi untuk sesi ini"
+                        >
+                          <History className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Riwayat Koreksi ({auditLogs.length})</span>
                         </button>
                       )}
                     </div>
@@ -2210,307 +2393,683 @@ export function AttendanceClientView({
             )}
           </div>
 
-          {/* Schedule Filter Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-              <button
-                type="button"
-                onClick={() => setScheduleStatusFilter("ALL")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  scheduleStatusFilter === "ALL"
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                Semua Jadwal ({meetings.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setScheduleStatusFilter("TERJADWAL")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  scheduleStatusFilter === "TERJADWAL"
-                    ? "bg-blue-600 text-white shadow-2xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                Terjadwal ({meetings.filter((m) => m.status === "TERJADWAL").length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setScheduleStatusFilter("SELESAI")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  scheduleStatusFilter === "SELESAI"
-                    ? "bg-emerald-600 text-white shadow-2xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                Selesai ({meetings.filter((m) => m.status === "SELESAI").length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setScheduleStatusFilter("DIBATALKAN")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  scheduleStatusFilter === "DIBATALKAN"
-                    ? "bg-rose-600 text-white shadow-2xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                Dibatalkan ({canceledMeetingsCount})
-              </button>
+          {/* Schedule Filtering & Controls */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+            {/* Row 1: Period Filter Pills */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs font-bold">
+                <span className="text-slate-400 uppercase text-[10px] font-black mr-1 hidden sm:inline">Periode:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchedulePeriodFilter("ALL");
+                    setSchedulePage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
+                    schedulePeriodFilter === "ALL"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Semua Periode ({meetings.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchedulePeriodFilter("THIS_MONTH");
+                    setSchedulePage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
+                    schedulePeriodFilter === "THIS_MONTH"
+                      ? "bg-emerald-600 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Bulan Ini ({formatMonthYearLabel(today.getFullYear(), today.getMonth())})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchedulePeriodFilter("UPCOMING");
+                    setSchedulePage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
+                    schedulePeriodFilter === "UPCOMING"
+                      ? "bg-sky-600 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Mendatang
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSchedulePeriodFilter("PAST");
+                    setSchedulePage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap ${
+                    schedulePeriodFilter === "PAST"
+                      ? "bg-purple-600 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Arsip Lampau
+                </button>
+              </div>
+
+              {/* Month selector dropdown if multiple months available */}
+              {availableMonths.length > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-400 font-semibold whitespace-nowrap hidden lg:inline">Pilih Bulan:</span>
+                  <select
+                    value={schedulePeriodFilter.startsWith("20") ? schedulePeriodFilter : ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSchedulePeriodFilter(e.target.value);
+                        setSchedulePage(1);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-emerald-600"
+                  >
+                    <option value="">(Pilih Arsip Bulan...)</option>
+                    {availableMonths.map(([key, info]) => (
+                      <option key={key} value={key}>
+                        {info.label} ({info.count} Sesi)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                value={scheduleSearch}
-                onChange={(e) => setScheduleSearch(e.target.value)}
-                placeholder="Cari judul atau agenda..."
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            {/* Row 2: Status, Attendance Status, Search, and View Mode Toggle */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Status Filter */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScheduleStatusFilter("ALL");
+                      setSchedulePage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      scheduleStatusFilter === "ALL" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScheduleStatusFilter("TERJADWAL");
+                      setSchedulePage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      scheduleStatusFilter === "TERJADWAL" ? "bg-blue-600 text-white shadow-2xs" : "text-slate-600 hover:text-blue-600"
+                    }`}
+                  >
+                    Terjadwal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScheduleStatusFilter("SELESAI");
+                      setSchedulePage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      scheduleStatusFilter === "SELESAI" ? "bg-emerald-600 text-white shadow-2xs" : "text-slate-600 hover:text-emerald-600"
+                    }`}
+                  >
+                    Selesai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScheduleStatusFilter("DIBATALKAN");
+                      setSchedulePage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      scheduleStatusFilter === "DIBATALKAN" ? "bg-rose-600 text-white shadow-2xs" : "text-slate-600 hover:text-rose-600"
+                    }`}
+                  >
+                    Dibatalkan
+                  </button>
+                </div>
+
+                {/* Attendance Status Filter */}
+                <select
+                  value={scheduleAttendanceFilter}
+                  onChange={(e) => {
+                    setScheduleAttendanceFilter(e.target.value as any);
+                    setSchedulePage(1);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-emerald-600"
+                >
+                  <option value="ALL">Semua Presensi</option>
+                  <option value="FILLED">Sudah Diisi</option>
+                  <option value="UNFILLED">Belum Diisi</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                {/* Search */}
+                <div className="relative flex-1 sm:w-64">
+                  <input
+                    type="text"
+                    value={scheduleSearch}
+                    onChange={(e) => {
+                      setScheduleSearch(e.target.value);
+                      setSchedulePage(1);
+                    }}
+                    placeholder="Cari judul, agenda, lokasi..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleViewMode("GRID")}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      scheduleViewMode === "GRID"
+                        ? "bg-white text-emerald-700 shadow-2xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                    title="Tampilan Kartu (Grid)"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleViewMode("TABLE")}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      scheduleViewMode === "TABLE"
+                        ? "bg-white text-emerald-700 shadow-2xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                    title="Tampilan Tabel Ringkas (Table)"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Schedule Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMeetings.length > 0 ? (
-              filteredMeetings.map((meeting) => {
-                const recordedCount = meeting.records?.length || 0;
-                const totalMembers = members.length;
-                const recordPercent = totalMembers > 0 ? Math.round((recordedCount / totalMembers) * 100) : 0;
+          {/* VIEW MODE 1: GRID VIEW */}
+          {scheduleViewMode === "GRID" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedMeetings.length > 0 ? (
+                paginatedMeetings.map((meeting) => {
+                  const recordedCount = meeting.records?.length || 0;
+                  const totalMembers = members.length;
+                  const recordPercent = totalMembers > 0 ? Math.round((recordedCount / totalMembers) * 100) : 0;
 
-                return (
-                  <div
-                    key={meeting.id}
-                    className={`bg-white rounded-3xl border p-5 shadow-xs flex flex-col justify-between space-y-4 transition-all hover:shadow-md ${
-                      meeting.status === "DIBATALKAN"
-                        ? "border-rose-200 bg-rose-50/20"
-                        : meeting.status === "SELESAI"
-                        ? "border-slate-200"
-                        : "border-blue-200 bg-blue-50/20"
-                    }`}
-                  >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* Attendance Fill Status Badge */}
-                          {meeting.status !== "DIBATALKAN" && (
-                            recordPercent >= 100 ? (
-                              <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                                <span>Sudah Terisi</span>
-                              </span>
-                            ) : recordedCount > 0 ? (
-                              <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-700" />
-                                <span>Terisi Sebagian</span>
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-300">
-                                Belum Diisi
-                              </span>
-                            )
-                          )}
+                  return (
+                    <div
+                      key={meeting.id}
+                      className={`bg-white rounded-3xl border p-5 shadow-xs flex flex-col justify-between space-y-4 transition-all hover:shadow-md ${
+                        meeting.status === "DIBATALKAN"
+                          ? "border-rose-200 bg-rose-50/20"
+                          : meeting.status === "SELESAI"
+                          ? "border-slate-200"
+                          : "border-blue-200 bg-blue-50/20"
+                      }`}
+                    >
+                      <div>
+                        {/* Top Badges */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Attendance Fill Status Badge */}
+                            {meeting.status !== "DIBATALKAN" && (
+                              recordPercent >= 100 ? (
+                                <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                  <span>Sudah Terisi</span>
+                                </span>
+                              ) : recordedCount > 0 ? (
+                                <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-700" />
+                                  <span>Terisi Sebagian</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-300">
+                                  Belum Diisi
+                                </span>
+                              )
+                            )}
 
-                          <span
-                            className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                              meeting.status === "SELESAI"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : meeting.status === "DIBATALKAN"
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-blue-50 text-blue-700 border border-blue-200"
-                            }`}
-                          >
-                            {meeting.status}
+                            <span
+                              className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                meeting.status === "SELESAI"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : meeting.status === "DIBATALKAN"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-blue-50 text-blue-700 border border-blue-200"
+                              }`}
+                            >
+                              {meeting.status}
+                            </span>
+
+                            {(() => {
+                              const cardMDate = new Date(meeting.meetingDate);
+                              const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
+                              const isCardToday = cardMDay.getTime() === today.getTime();
+                              const isCardFuture = cardMDay.getTime() > today.getTime();
+                              const cardDaysDiff = Math.round((cardMDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                              if (isCardFuture && meeting.status !== "DIBATALKAN") {
+                                return (
+                                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-sky-100 text-sky-800 inline-flex items-center gap-1">
+                                    <Lock className="w-2.5 h-2.5" /> H-{cardDaysDiff}
+                                  </span>
+                                );
+                              }
+                              if (isCardToday && meeting.status !== "DIBATALKAN") {
+                                return (
+                                  <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                                    🟢 Hari Ini
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            {formatDayDate(meeting.meetingDate)}
                           </span>
+                        </div>
 
+                        {/* Title & Agenda */}
+                        <h4 className="font-black text-sm sm:text-base text-slate-900 mt-2.5 leading-snug">
+                          {meeting.title && !meeting.title.toLowerCase().startsWith("latihan rutin minggu ke-")
+                            ? meeting.title
+                            : formatDayDate(meeting.meetingDate)}
+                        </h4>
+
+                        <div className="mt-2 space-y-1 text-xs text-slate-600">
+                          <p className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{meeting.startTime || "14:00"} - {meeting.endTime || "16:30"} WIB</span>
+                          </p>
+                          <p className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{meeting.location || "Pangkalan"}</span>
+                          </p>
+                          {meeting.agenda && (
+                            <p className="text-slate-500 line-clamp-2 pt-1 border-t border-slate-100 text-[11px]">
+                              {meeting.agenda}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Attendance Progress & Action Buttons */}
+                      <div className="pt-3 border-t border-slate-100 space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                            <span>Status Presensi</span>
+                            <span className="text-slate-800">
+                              {recordedCount} / {totalMembers} Anggota ({recordPercent}%)
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                recordPercent >= 80 ? "bg-emerald-500" : "bg-amber-500"
+                              }`}
+                              style={{ width: `${Math.min(recordPercent, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action Row */}
+                        <div className="flex items-center justify-between gap-2 pt-1">
                           {(() => {
                             const cardMDate = new Date(meeting.meetingDate);
                             const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
-                            const isCardToday = cardMDay.getTime() === today.getTime();
                             const isCardFuture = cardMDay.getTime() > today.getTime();
-                            const cardDaysDiff = Math.round((cardMDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-                            if (isCardFuture && meeting.status !== "DIBATALKAN") {
-                              return (
-                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-sky-100 text-sky-800 inline-flex items-center gap-1">
-                                  <Lock className="w-2.5 h-2.5" /> H-{cardDaysDiff}
-                                </span>
-                              );
-                            }
-                            if (isCardToday && meeting.status !== "DIBATALKAN") {
-                              return (
-                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
-                                  🟢 Hari Ini
-                                </span>
-                              );
-                            }
-                            return null;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleChangeMeeting(meeting.id);
+                                  setActiveTab("SHEET");
+                                }}
+                                className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs text-center transition-all shadow-2xs inline-flex items-center justify-center gap-1.5 ${
+                                  isCardFuture
+                                    ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                    : recordPercent >= 100
+                                    ? "bg-emerald-700 hover:bg-emerald-600 text-white"
+                                    : recordedCount > 0
+                                    ? "bg-amber-600 hover:bg-amber-500 text-white"
+                                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                }`}
+                              >
+                                {isCardFuture ? (
+                                  <>
+                                    <Lock className="w-3 h-3 text-slate-500" />
+                                    <span>Lihat Sesi (Terkunci)</span>
+                                  </>
+                                ) : recordPercent >= 100 ? (
+                                  <>
+                                    <Edit3 className="w-3 h-3" />
+                                    <span>Edit / Ubah Absensi</span>
+                                  </>
+                                ) : recordedCount > 0 ? (
+                                  <>
+                                    <Edit3 className="w-3 h-3" />
+                                    <span>Lanjutkan / Edit Absensi</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckSquare className="w-3 h-3" />
+                                    <span>Mulai Isi Absensi</span>
+                                  </>
+                                )}
+                              </button>
+                            );
                           })()}
-                        </div>
 
-                        <span className="text-[11px] font-semibold text-slate-500">
-                          {formatDayDate(meeting.meetingDate)}
-                        </span>
-                      </div>
+                          {canEdit && !isKetuaRegu && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setEditMeetingModal(meeting)}
+                                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                title="Edit Informasi Pertemuan"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
 
-                      {/* Title & Agenda */}
-                      <h4 className="font-black text-sm sm:text-base text-slate-900 mt-2.5 leading-snug">
-                        {meeting.title && !meeting.title.toLowerCase().startsWith("latihan rutin minggu ke-")
-                          ? meeting.title
-                          : formatDayDate(meeting.meetingDate)}
-                      </h4>
-
-                      <div className="mt-2 space-y-1 text-xs text-slate-600">
-                        <p className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{meeting.startTime || "14:00"} - {meeting.endTime || "16:30"} WIB</span>
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{meeting.location || "Pangkalan"}</span>
-                        </p>
-                        {meeting.agenda && (
-                          <p className="text-slate-500 line-clamp-2 pt-1 border-t border-slate-100 text-[11px]">
-                            {meeting.agenda}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Attendance Progress & Action Buttons */}
-                    <div className="pt-3 border-t border-slate-100 space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
-                          <span>Status Presensi</span>
-                          <span className="text-slate-800">
-                            {recordedCount} / {totalMembers} Anggota ({recordPercent}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              recordPercent >= 80 ? "bg-emerald-500" : "bg-amber-500"
-                            }`}
-                            style={{ width: `${Math.min(recordPercent, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Action Row */}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        {(() => {
-                          const cardMDate = new Date(meeting.meetingDate);
-                          const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
-                          const isCardFuture = cardMDay.getTime() > today.getTime();
-
-                          return (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleChangeMeeting(meeting.id);
-                                setActiveTab("SHEET");
-                              }}
-                              className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs text-center transition-all shadow-2xs inline-flex items-center justify-center gap-1.5 ${
-                                isCardFuture
-                                  ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                  : recordPercent >= 100
-                                  ? "bg-emerald-700 hover:bg-emerald-600 text-white"
-                                  : recordedCount > 0
-                                  ? "bg-amber-600 hover:bg-amber-500 text-white"
-                                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                              }`}
-                            >
-                              {isCardFuture ? (
-                                <>
-                                  <Lock className="w-3 h-3 text-slate-500" />
-                                  <span>Lihat Sesi (Terkunci)</span>
-                                </>
-                              ) : recordPercent >= 100 ? (
-                                <>
-                                  <Edit3 className="w-3 h-3" />
-                                  <span>Edit / Ubah Absensi</span>
-                                </>
-                              ) : recordedCount > 0 ? (
-                                <>
-                                  <Edit3 className="w-3 h-3" />
-                                  <span>Lanjutkan / Edit Absensi</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckSquare className="w-3 h-3" />
-                                  <span>Mulai Isi Absensi</span>
-                                </>
+                              {/* Quick status toggle */}
+                              {meeting.status === "TERJADWAL" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(meeting.id, "SELESAI")}
+                                  className="p-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                  title="Tandai Selesai"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
                               )}
-                            </button>
-                          );
-                        })()}
 
-                        {canEdit && !isKetuaRegu && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setEditMeetingModal(meeting)}
-                              className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-                              title="Edit Pertemuan"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
+                              {meeting.status !== "DIBATALKAN" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(meeting.id, "DIBATALKAN")}
+                                  className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors"
+                                  title="Batalkan Pertemuan"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(meeting.id, "TERJADWAL")}
+                                  className="p-1.5 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="Aktifkan Kembali"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                              )}
 
-                            {/* Quick status toggle */}
-                            {meeting.status === "TERJADWAL" && (
                               <button
                                 type="button"
-                                onClick={() => handleToggleStatus(meeting.id, "SELESAI")}
-                                className="p-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                title="Tandai Selesai"
+                                onClick={() => setDeleteMeetingConfirm(meeting)}
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                title="Hapus Pertemuan"
                               >
-                                <Check className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
-                            )}
-
-                            {meeting.status !== "DIBATALKAN" ? (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleStatus(meeting.id, "DIBATALKAN")}
-                                className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors"
-                                title="Batalkan Pertemuan"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleStatus(meeting.id, "TERJADWAL")}
-                                className="p-1.5 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors"
-                                title="Aktifkan Kembali"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => setDeleteMeetingConfirm(meeting)}
-                              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                              title="Hapus Pertemuan"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="col-span-full py-16 text-center text-xs text-slate-400">
-                Tidak ada jadwal pertemuan yang sesuai dengan filter.
+                  );
+                })
+              ) : (
+                <div className="col-span-full py-16 text-center text-xs text-slate-400 bg-white rounded-3xl border border-slate-200/80 p-8">
+                  <CalendarDays className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="font-bold text-slate-600">Tidak ada jadwal pertemuan yang sesuai dengan filter.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Coba ubah filter periode atau status di atas.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW MODE 2: TABLE LIST VIEW */}
+          {scheduleViewMode === "TABLE" && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                      <th className="py-3.5 px-4">Tanggal & Waktu</th>
+                      <th className="py-3.5 px-4">Sesi Pertemuan & Materi</th>
+                      <th className="py-3.5 px-4">Lokasi</th>
+                      <th className="py-3.5 px-4">Status Sesi</th>
+                      <th className="py-3.5 px-4">Presensi</th>
+                      <th className="py-3.5 px-4 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedMeetings.length > 0 ? (
+                      paginatedMeetings.map((meeting) => {
+                        const recordedCount = meeting.records?.length || 0;
+                        const totalMembers = members.length;
+                        const recordPercent = totalMembers > 0 ? Math.round((recordedCount / totalMembers) * 100) : 0;
+                        const cardMDate = new Date(meeting.meetingDate);
+                        const cardMDay = new Date(cardMDate.getFullYear(), cardMDate.getMonth(), cardMDate.getDate(), 0, 0, 0, 0);
+                        const isCardToday = cardMDay.getTime() === today.getTime();
+                        const isCardFuture = cardMDay.getTime() > today.getTime();
+                        const cardDaysDiff = Math.round((cardMDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                        return (
+                          <tr key={meeting.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="font-bold text-slate-900">
+                                {formatDayDate(meeting.meetingDate)}
+                              </div>
+                              <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>{meeting.startTime || "14:00"} - {meeting.endTime || "16:30"} WIB</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 min-w-[200px]">
+                              <div className="font-bold text-slate-900">
+                                {meeting.title}
+                              </div>
+                              {meeting.agenda ? (
+                                <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                  {meeting.agenda}
+                                </div>
+                              ) : (
+                                <div className="text-[11px] text-slate-400 italic mt-0.5">
+                                  (Tidak ada agenda tertulis)
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span>{meeting.location || "Pangkalan"}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                  meeting.status === "SELESAI"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : meeting.status === "DIBATALKAN"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}>
+                                  {meeting.status}
+                                </span>
+                                {isCardFuture && meeting.status !== "DIBATALKAN" && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800">
+                                    H-{cardDaysDiff}
+                                  </span>
+                                )}
+                                {isCardToday && meeting.status !== "DIBATALKAN" && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                    🟢 Hari Ini
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="w-32">
+                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-600 mb-1">
+                                  <span>{recordedCount}/{totalMembers}</span>
+                                  <span>{recordPercent}%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      recordPercent >= 80 ? "bg-emerald-500" : "bg-amber-500"
+                                    }`}
+                                    style={{ width: `${Math.min(recordPercent, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleChangeMeeting(meeting.id);
+                                    setActiveTab("SHEET");
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl font-bold text-xs inline-flex items-center gap-1 transition-all ${
+                                    isCardFuture
+                                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                      : recordPercent >= 100
+                                      ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                  }`}
+                                >
+                                  {isCardFuture ? (
+                                    <>
+                                      <Lock className="w-3 h-3 text-slate-500" />
+                                      <span>Lihat</span>
+                                    </>
+                                  ) : recordPercent >= 100 ? (
+                                    <>
+                                      <Edit3 className="w-3 h-3 text-emerald-600" />
+                                      <span>Edit Absensi</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckSquare className="w-3 h-3" />
+                                      <span>Isi Absensi</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {canEdit && !isKetuaRegu && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditMeetingModal(meeting)}
+                                      className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                      title="Edit Pertemuan"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeleteMeetingConfirm(meeting)}
+                                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                      title="Hapus Pertemuan"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                          Tidak ada jadwal pertemuan yang sesuai dengan filter.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Pagination & Summary Bar */}
+          {filteredMeetings.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="text-slate-500">
+                Menampilkan <strong className="text-slate-800">{schedulePageSize === "ALL" ? 1 : (schedulePage - 1) * schedulePageSize + 1}</strong> - <strong className="text-slate-800">{schedulePageSize === "ALL" ? filteredMeetings.length : Math.min(schedulePage * schedulePageSize, filteredMeetings.length)}</strong> dari <strong className="text-slate-800">{filteredMeetings.length}</strong> sesi pertemuan
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-3">
+                {/* Per Page Selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 text-[11px]">Tampil:</span>
+                  <select
+                    value={schedulePageSize}
+                    onChange={(e) => {
+                      const val = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
+                      setSchedulePageSize(val as any);
+                      setSchedulePage(1);
+                    }}
+                    className="px-2 py-1 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50"
+                  >
+                    <option value={9}>9 / hal</option>
+                    <option value={18}>18 / hal</option>
+                    <option value={36}>36 / hal</option>
+                    <option value="ALL">Semua</option>
+                  </select>
+                </div>
+
+                {/* Page Navigation */}
+                {totalSchedulePages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={schedulePage <= 1}
+                      onClick={() => setSchedulePage((p) => Math.max(1, p - 1))}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Halaman Sebelumnya"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="px-2 font-bold text-slate-700">
+                      {schedulePage} / {totalSchedulePages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={schedulePage >= totalSchedulePages}
+                      onClick={() => setSchedulePage((p) => Math.min(totalSchedulePages, p + 1))}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Halaman Selanjutnya"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3869,7 +4428,13 @@ export function AttendanceClientView({
                   required
                   defaultValue={
                     editMeetingModal.meetingDate
-                      ? new Date(editMeetingModal.meetingDate).toISOString().split("T")[0]
+                      ? (() => {
+                          const d = new Date(editMeetingModal.meetingDate);
+                          const y = d.getFullYear();
+                          const m = String(d.getMonth() + 1).padStart(2, "0");
+                          const day = String(d.getDate()).padStart(2, "0");
+                          return `${y}-${m}-${day}`;
+                        })()
                       : ""
                   }
                   className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
@@ -4085,6 +4650,108 @@ export function AttendanceClientView({
                 </button>
               )}
             </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: RIWAYAT KOREKSI PRESENSI (AUDIT TRAIL)                            */}
+      {/* ========================================================================= */}
+      {showAuditTrailModal && activeMeeting && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="min-h-full flex items-center justify-center py-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-7 space-y-4 shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Riwayat Audit & Koreksi Presensi</h3>
+                    <p className="text-[11px] text-slate-500">
+                      Sesi: <strong>{activeMeeting.title}</strong> ({formatDayDate(activeMeeting.meetingDate)})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditTrailModal(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-2.5">
+                {auditLogs.length > 0 ? (
+                  auditLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 transition-colors text-xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-slate-900 truncate">{log.memberName}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">({log.groupName})</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                          {formatDate(log.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 font-bold line-through">
+                          {log.previousStatus || "BELUM_DIISI"}
+                        </span>
+                        <span className="text-slate-400 font-black">➔</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-md font-black ${
+                            log.newStatus === "HADIR"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : log.newStatus === "IZIN"
+                              ? "bg-blue-100 text-blue-800"
+                              : log.newStatus === "SAKIT"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {log.newStatus}
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-slate-600">
+                          Oleh: <strong>{log.changedByName}</strong> ({log.changedByRole})
+                        </span>
+                      </div>
+
+                      {log.reason && (
+                        <p className="text-[11px] text-slate-600 italic bg-white px-3 py-1.5 rounded-xl border border-slate-200/60">
+                          Keterangan: {log.reason}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-slate-400 text-xs">
+                    <History className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="font-bold text-slate-700">Belum ada riwayat koreksi susulan</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Setiap koreksi status presensi sesi lampau oleh Admin akan otomatis tercatat di sini.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Total <strong>{auditLogs.length}</strong> riwayat perubahan</span>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditTrailModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>

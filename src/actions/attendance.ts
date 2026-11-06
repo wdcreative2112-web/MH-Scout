@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import {
@@ -115,6 +116,8 @@ export async function updateMeetingAction(formData: FormData) {
       };
     }
 
+    const isPastSession = sessionDay.getTime() < today.getTime();
+
     const meeting = await prisma.attendanceMeeting.update({
       where: { id: parsed.data.id },
       data: {
@@ -133,9 +136,11 @@ export async function updateMeetingAction(formData: FormData) {
       data: {
         userId: session.id,
         userName: session.name,
-        action: "UBAH_PERTEMUAN",
+        action: isPastSession ? "KOREKSI_JADWAL_LAMPAU" : "UBAH_PERTEMUAN",
         module: "ABSENSI",
-        details: `Mengubah jadwal latihan: ${meeting.title} [Status: ${meeting.status}]`,
+        details: isPastSession
+          ? `Admin mengoreksi jadwal latihan lampau: "${meeting.title}" (${meeting.meetingDate.toISOString().split("T")[0]}) [Status: ${meeting.status}]`
+          : `Mengubah jadwal latihan: "${meeting.title}" [Status: ${meeting.status}]`,
       },
     }).catch(() => {});
 
@@ -235,7 +240,15 @@ export async function deleteMeetingAction(meetingId: string) {
       where: { meetingId },
     }).catch(() => {});
 
-    // 2. Hapus seluruh data presensi anggota pada pertemuan ini secara eksplisit (mencegah error FK)
+    // 2. Hapus tagihan denda ALPA yang masih BELUM_LUNAS terkait pertemuan ini
+    await prisma.memberDues.deleteMany({
+      where: {
+        notes: { contains: `MEETING_ID:${meetingId}` },
+        status: "BELUM_LUNAS",
+      },
+    }).catch(() => {});
+
+    // 3. Hapus seluruh data presensi anggota pada pertemuan ini secara eksplisit (mencegah error FK)
     await prisma.attendanceRecord.deleteMany({
       where: { meetingId },
     }).catch(() => {});
@@ -453,81 +466,114 @@ export async function saveBatchAttendanceAction(data: {
     });
     const existingMap = new Map(existingRecords.map((r) => [r.memberId, r]));
 
-    // Run database transactions for atomic persistence dengan timeout lebih aman untuk Neon Cloud
-    await prisma.$transaction(
-      async (tx: any) => {
-        const auditLogsToCreate: any[] = [];
+    // Pisahkan record baru (Batch Create) dan record yang berubah (Update)
+    const recordsToCreate: any[] = [];
+    const recordsToUpdate: any[] = [];
+    const auditLogsToCreate: any[] = [];
+    const nowTimestamp = new Date();
 
-        for (const rec of records) {
-          const existing = existingMap.get(rec.memberId);
+    for (const rec of records) {
+      const existing = existingMap.get(rec.memberId);
 
-          if (existing) {
-            // Record audit log if status changed
-            if (existing.status !== rec.status) {
-              auditLogsToCreate.push({
-                meetingId,
-                memberId: rec.memberId,
-                previousStatus: existing.status,
-                newStatus: rec.status,
-                changedById: session.id,
-                reason: rec.notes || (isPastSession ? "Koreksi sesi lampau oleh Admin" : "Koreksi absensi latihan"),
-              });
-            }
+      if (!existing) {
+        recordsToCreate.push({
+          id: crypto.randomUUID(),
+          meetingId,
+          memberId: rec.memberId,
+          status: rec.status,
+          notes: rec.notes || null,
+          recordedById: session.id,
+          createdAt: nowTimestamp,
+          updatedAt: nowTimestamp,
+        });
 
-            await tx.attendanceRecord.update({
-              where: { id: existing.id },
-              data: {
-                status: rec.status,
-                notes: rec.notes !== undefined ? rec.notes : existing.notes,
-                recordedById: session.id,
-              },
-            });
-          } else {
-            await tx.attendanceRecord.create({
-              data: {
-                meetingId,
-                memberId: rec.memberId,
-                status: rec.status,
-                notes: rec.notes || null,
-                recordedById: session.id,
-              },
-            });
+        auditLogsToCreate.push({
+          id: crypto.randomUUID(),
+          meetingId,
+          memberId: rec.memberId,
+          previousStatus: "BELUM_DIISI",
+          newStatus: rec.status,
+          changedById: session.id,
+          reason: rec.notes
+            ? (isPastSession ? `[KOREKSI_ABSENSI_LAMPAU] ${rec.notes}` : rec.notes)
+            : (isPastSession ? "Pengisian susulan sesi lampau oleh Admin [KOREKSI_ABSENSI_LAMPAU]" : "Pengisian absensi awal"),
+          createdAt: nowTimestamp,
+        });
+      } else {
+        const isStatusChanged = existing.status !== rec.status;
+        const isNoteChanged = rec.notes !== undefined && rec.notes !== existing.notes;
 
+        if (isStatusChanged || isNoteChanged) {
+          recordsToUpdate.push({
+            id: existing.id,
+            status: rec.status,
+            notes: rec.notes !== undefined ? rec.notes : existing.notes,
+            recordedById: session.id,
+          });
+
+          if (isStatusChanged) {
             auditLogsToCreate.push({
+              id: crypto.randomUUID(),
               meetingId,
               memberId: rec.memberId,
-              previousStatus: "BELUM_DIISI",
+              previousStatus: existing.status,
               newStatus: rec.status,
               changedById: session.id,
-              reason: rec.notes || (isPastSession ? "Pengisian susulan sesi lampau oleh Admin" : "Pengisian absensi awal"),
+              reason: rec.notes
+                ? (isPastSession ? `[KOREKSI_ABSENSI_LAMPAU] ${rec.notes}` : rec.notes)
+                : (isPastSession ? "Koreksi sesi lampau oleh Admin [KOREKSI_ABSENSI_LAMPAU]" : "Koreksi absensi latihan"),
+              createdAt: nowTimestamp,
             });
           }
         }
-
-        // Simpan log audit secara aman (tidak menggagalkan penyimpanan absensi jika audit gagal)
-        if (auditLogsToCreate.length > 0) {
-          try {
-            await tx.attendanceAuditLog.createMany({
-              data: auditLogsToCreate,
-            });
-          } catch (auditErr) {
-            console.warn("Attendance audit log notice:", auditErr);
-          }
-        }
-
-        // Update status pertemuan menjadi SELESAI jika sebelumnya masih TERJADWAL
-        if (meeting.status === "TERJADWAL") {
-          await tx.attendanceMeeting.update({
-            where: { id: meetingId },
-            data: { status: "SELESAI" },
-          });
-        }
-      },
-      {
-        maxWait: 10000,
-        timeout: 30000,
       }
-    );
+    }
+
+    // 1. Simpan seluruh record baru dalam 1 query batch cepat (createMany)
+    if (recordsToCreate.length > 0) {
+      await prisma.attendanceRecord.createMany({
+        data: recordsToCreate,
+        skipDuplicates: true,
+      });
+    }
+
+    // 2. Perbarui record yang mengalami perubahan status/catatan secara efisien
+    if (recordsToUpdate.length > 0) {
+      const CHUNK_SIZE = 25;
+      for (let i = 0; i < recordsToUpdate.length; i += CHUNK_SIZE) {
+        const chunk = recordsToUpdate.slice(i, i + CHUNK_SIZE);
+        await Promise.all(
+          chunk.map((item) =>
+            prisma.attendanceRecord.update({
+              where: { id: item.id },
+              data: {
+                status: item.status,
+                notes: item.notes,
+                recordedById: item.recordedById,
+                updatedAt: nowTimestamp,
+              },
+            })
+          )
+        );
+      }
+    }
+
+    // 3. Simpan log audit secara aman (Batch Insert)
+    if (auditLogsToCreate.length > 0) {
+      await prisma.attendanceAuditLog.createMany({
+        data: auditLogsToCreate,
+      }).catch((auditErr) => {
+        console.warn("Attendance audit log notice:", auditErr);
+      });
+    }
+
+    // 4. Update status pertemuan menjadi SELESAI jika sebelumnya masih TERJADWAL
+    if (meeting.status === "TERJADWAL") {
+      await prisma.attendanceMeeting.update({
+        where: { id: meetingId },
+        data: { status: "SELESAI" },
+      });
+    }
 
     // Sinkronkan denda untuk status ALPA secara otomatis
     try {

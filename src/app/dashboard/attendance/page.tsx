@@ -21,6 +21,7 @@ export default async function AttendancePage({
   let activeMeeting = null;
   let routineConfig = null;
   let lastAuditLog: any = null;
+  let rawAuditLogs: any[] = [];
 
   try {
     const [
@@ -136,11 +137,16 @@ export default async function AttendancePage({
           include: { member: true },
         });
 
-        lastAuditLog = await prisma.attendanceAuditLog.findFirst({
+        rawAuditLogs = await prisma.attendanceAuditLog.findMany({
           where: { meetingId: activeMeeting.id },
           orderBy: { createdAt: "desc" },
+          take: 50,
           include: { changedBy: { select: { name: true, role: true } } },
         });
+
+        if (rawAuditLogs.length > 0) {
+          lastAuditLog = rawAuditLogs[0];
+        }
       }
     }
 
@@ -240,6 +246,25 @@ export default async function AttendancePage({
       ? leaveRequests.filter((lr) => lr.groupId === userGroupId)
       : leaveRequests;
 
+    const memberNameMap = new Map(members.map((m) => [m.id, { name: m.fullName, number: m.memberNumber, group: m.group?.name || "-" }]));
+
+    const formattedAuditLogs = rawAuditLogs.map((l) => {
+      const mInfo = memberNameMap.get(l.memberId);
+      return {
+        id: l.id,
+        memberId: l.memberId,
+        memberName: mInfo?.name || "Anggota",
+        memberNumber: mInfo?.number || "-",
+        groupName: mInfo?.group || "-",
+        previousStatus: l.previousStatus,
+        newStatus: l.newStatus,
+        reason: l.reason,
+        changedByName: l.changedBy?.name || "Pengurus",
+        changedByRole: l.changedBy?.role || "PENGURUS",
+        createdAt: l.createdAt.toISOString(),
+      };
+    });
+
     return (
       <div className="space-y-6">
         <AttendanceClientView
@@ -261,6 +286,7 @@ export default async function AttendancePage({
           initialFineAmount={fineAmount}
           initialLeaveRequests={filteredLeaveRequests}
           initialTab={isKetuaRegu ? "SHEET" : (tab ? (tab.toUpperCase() as any) : "MENU")}
+          auditLogs={formattedAuditLogs}
           lastAuditLog={lastAuditLog ? {
             userName: lastAuditLog.changedBy?.name || "Pengurus",
             userRole: lastAuditLog.changedBy?.role || "PENGURUS",

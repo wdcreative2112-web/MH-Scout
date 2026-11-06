@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
@@ -47,42 +48,57 @@ export async function syncFinesForMeeting(
     const fineDuesType = await getOrCreateFineDuesType();
     const fineAmount = Number(fineDuesType.amount);
     const dateFormatted = formatDate(meeting.meetingDate);
+    const noteMarker = `MEETING_ID:${meetingId}`;
+    const memberIds = records.map((r) => r.memberId);
+
+    // Ambil semua denda terkait pertemuan dan anggota yang tertera sekaligus (Batch Lookup)
+    const existingFines = await prisma.memberDues.findMany({
+      where: {
+        duesTypeId: fineDuesType.id,
+        memberId: { in: memberIds },
+        notes: { contains: noteMarker },
+      },
+    });
+
+    const fineMap = new Map(existingFines.map((f) => [f.memberId, f]));
+    const finesToCreate: any[] = [];
+    const fineIdsToDelete: string[] = [];
 
     for (const rec of records) {
-      const noteMarker = `MEETING_ID:${meetingId}`;
-
-      // Cari denda terkait pertemuan dan anggota ini
-      const existingFine = await prisma.memberDues.findFirst({
-        where: {
-          duesTypeId: fineDuesType.id,
-          memberId: rec.memberId,
-          notes: { contains: noteMarker },
-        },
-      });
+      const existingFine = fineMap.get(rec.memberId);
 
       if (rec.status === "ALPA") {
         if (!existingFine) {
           // Buat denda baru status BELUM_LUNAS
-          await prisma.memberDues.create({
-            data: {
-              duesTypeId: fineDuesType.id,
-              memberId: rec.memberId,
-              periodName: `Denda Alpa - ${dateFormatted}`,
-              amount: fineAmount,
-              amountPaid: 0,
-              status: "BELUM_LUNAS",
-              notes: `${noteMarker} | ${meeting.title}`,
-            },
+          finesToCreate.push({
+            id: crypto.randomUUID(),
+            duesTypeId: fineDuesType.id,
+            memberId: rec.memberId,
+            periodName: `Denda Alpa - ${dateFormatted}`,
+            amount: fineAmount,
+            amountPaid: 0,
+            status: "BELUM_LUNAS",
+            notes: `${noteMarker} | ${meeting.title}`,
           });
         }
       } else {
-        // Jika status sekarang bukan ALPA, tapi sebelumnya ada denda yang BELUM_LUNAS, hapus
+        // Jika status sekarang bukan ALPA (HADIR / IZIN / SAKIT), dan sebelumnya ada denda yang BELUM_LUNAS, hapus denda
         if (existingFine && existingFine.status === "BELUM_LUNAS") {
-          await prisma.memberDues.delete({
-            where: { id: existingFine.id },
-          }).catch(() => {});
+          fineIdsToDelete.push(existingFine.id);
         }
       }
+    }
+
+    if (finesToCreate.length > 0) {
+      await prisma.memberDues.createMany({
+        data: finesToCreate,
+      });
+    }
+
+    if (fineIdsToDelete.length > 0) {
+      await prisma.memberDues.deleteMany({
+        where: { id: { in: fineIdsToDelete } },
+      });
     }
   } catch (err) {
     console.error("Error syncing attendance fines:", err);
